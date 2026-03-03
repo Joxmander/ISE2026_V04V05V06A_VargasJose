@@ -1,0 +1,15 @@
+# Ignorar carpetas de compilación de Keil
+HTTP_Server/Debug/
+HTTP_Server/Release/
+
+# Archivos generados automáticamente
+*.o
+*.d
+*.axf
+*.htm
+*.map
+*.lnp
+*.lst
+*.crf
+*.dep
+*.uvguix.*

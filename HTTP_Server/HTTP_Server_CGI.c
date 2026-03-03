@@ -22,8 +22,8 @@
 #endif
 
 // http_server.c
-//extern uint16_t AD_in (uint32_t ch);
-//extern uint8_t  get_button (void);
+extern uint16_t AD_in (uint32_t ch);
+extern uint8_t  get_button (void);
 
 extern bool LEDrun;
 extern char lcd_text[2][20+1];
@@ -267,7 +267,7 @@ uint32_t netCGI_Script (const char *env, char *buf, uint32_t buflen, uint32_t *p
   const char *lang;
   uint32_t len = 0U;
   uint8_t id;
-//  static uint32_t adv;
+  static uint32_t adv;
   netIF_Option opt = netIF_OptionMAC_Address;
   int16_t      typ = 0;
 

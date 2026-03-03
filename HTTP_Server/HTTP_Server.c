@@ -9,7 +9,10 @@
 #include <stdio.h>
 
 #include "main.h"
+
 #include "lcd.h"
+#include "adc.h"
+
 #include "rl_net.h"                     // Keil.MDK-Pro::Network:CORE
 
 #include "stm32f4xx_hal.h"              // Keil::Device:STM32Cube HAL:Common
@@ -43,32 +46,57 @@ extern osThreadId_t TID_Led;
 bool LEDrun;
 char lcd_text[2][20+1] = { "LCD line 1",
                            "LCD line 2" };
+#include "adc.h" // Asegúrate de que este include esté arriba
 
+
+ADC_HandleTypeDef hadc1;
+													 
 /* Thread IDs */
 osThreadId_t TID_Display;
 osThreadId_t TID_Led;
 
 /* Thread declarations */
 static void BlinkLed (void *arg);
-static void Display  (void *arg);
+//static void Display  (void *arg);
 
 __NO_RETURN void app_main (void *arg);
 
 /* Read analog inputs */
-uint16_t AD_in (uint32_t ch) {
-  int32_t val = 0;
+//uint16_t AD_in (uint32_t ch) {
+//  int32_t val = 0;
 
-  if (ch == 0) {
-    ADC_StartConversion();
-    while (ADC_ConversionDone () < 0);
-    val = ADC_GetValue();
+//  if (ch == 0) {
+//    ADC_StartConversion();
+//    while (ADC_ConversionDone () < 0);
+//    val = ADC_GetValue();
+//  }
+//  return ((uint16_t)val);
+//}
+
+uint16_t AD_in (uint32_t ch) {
+  ADC_ChannelConfTypeDef sConfig = {0};
+  
+  // Seleccionamos el canal según el diseño de la placa Nucleo (PC0 = IN10)
+  sConfig.Channel = ADC_CHANNEL_10; 
+  sConfig.Rank = 1;
+  sConfig.SamplingTime = ADC_SAMPLETIME_3CYCLES;
+  
+  HAL_ADC_ConfigChannel(&hadc1, &sConfig);
+  HAL_ADC_Start(&hadc1);
+  if (HAL_ADC_PollForConversion(&hadc1, 10) == HAL_OK) {
+    return (uint16_t)HAL_ADC_GetValue(&hadc1);
   }
-  return ((uint16_t)val);
+  return 0;
 }
 
 /* Read digital inputs */
+//uint8_t get_button (void) {
+//  return ((uint8_t)Buttons_GetState ());
+//}
 uint8_t get_button (void) {
-  return ((uint8_t)Buttons_GetState ());
+  // No estamos usando el driver de botones del BSP, 
+  // devolvemos 0 para que el servidor web no falle al compilar.
+  return 0; 
 }
 
 /* IP address change notification */
@@ -171,6 +199,11 @@ __NO_RETURN void app_main (void *arg) {
  // ADC_Initialize();
 
   Init_ThLCD(); 
+	
+  // INICIALIZACIÓN DE TU ADC
+  ADC1_pins_F429ZI_config(); // Configura los pines PC0/PC3
+  ADC_Init_Single_Conversion(&hadc1, ADC1); // Configura el periférico
+	
   netInitialize (); //
   TID_Led     = osThreadNew (BlinkLed, NULL, NULL);
 //  TID_Display = osThreadNew (Display,  NULL, NULL);

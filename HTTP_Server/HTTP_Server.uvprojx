@@ -138,7 +138,7 @@
           </Flash1>
           <bUseTDR>1</bUseTDR>
           <Flash2>BIN\UL2CM3.DLL</Flash2>
-          <Flash3>"" ()</Flash3>
+          <Flash3></Flash3>
           <Flash4></Flash4>
           <pFcarmOut>Web.c</pFcarmOut>
           <pFcarmGrp>Source</pFcarmGrp>
@@ -313,7 +313,7 @@
           </ArmAdsMisc>
           <Cads>
             <interw>1</interw>
-            <Optim>1</Optim>
+            <Optim>2</Optim>
             <oTime>0</oTime>
             <SplitLS>0</SplitLS>
             <OneElfS>0</OneElfS>
@@ -524,11 +524,6 @@
               <FilePath>.\LCD.c</FilePath>
             </File>
             <File>
-              <FileName>LCD.h</FileName>
-              <FileType>5</FileType>
-              <FilePath>.\LCD.h</FilePath>
-            </File>
-            <File>
               <FileName>Arial12x12.h</FileName>
               <FileType>5</FileType>
               <FilePath>.\Arial12x12.h</FilePath>
@@ -574,14 +569,14 @@
 
   <RTE>
     <apis>
-      <api Capiversion="1.0.0" Cclass="Board Support" Cgroup="Buttons" exclusive="0">
-        <package name="MDK-Middleware" schemaVersion="1.4" url="http://www.keil.com/pack/" vendor="Keil" version="7.13.0"/>
+      <api Capiversion="1.00" Cclass="Board Support" Cgroup="Buttons" exclusive="0">
+        <package name="MDK-Middleware" schemaVersion="1.0" url="http://www.keil.com/pack/" vendor="Keil" version="6.1.0"/>
         <targetInfos>
           <targetInfo name="Debug"/>
         </targetInfos>
       </api>
-      <api Capiversion="1.0.0" Cclass="Board Support" Cgroup="LED" exclusive="0">
-        <package name="MDK-Middleware" schemaVersion="1.4" url="http://www.keil.com/pack/" vendor="Keil" version="7.13.0"/>
+      <api Capiversion="1.00" Cclass="Board Support" Cgroup="LED" exclusive="0">
+        <package name="MDK-Middleware" schemaVersion="1.0" url="http://www.keil.com/pack/" vendor="Keil" version="6.1.0"/>
         <targetInfos>
           <targetInfo name="Debug"/>
         </targetInfos>
@@ -875,12 +870,6 @@
         <targetInfos>
           <targetInfo name="Debug"/>
         </targetInfos>
-      </file>
-      <file attr="config" category="header" name="Network\Config\Net_Config_ETH.h" version="7.3.0">
-        <instance index="1" removed="1">RTE\Network\Net_Config_ETH_1.h</instance>
-        <component Cbundle="MDK-Pro" Cclass="Network" Cgroup="Interface" Csub="ETH" Cvendor="Keil" Cversion="7.15.0" condition="Network Driver ETH" maxInstances="2"/>
-        <package name="MDK-Middleware" schemaVersion="1.4" url="http://www.keil.com/pack/" vendor="Keil" version="7.13.0"/>
-        <targetInfos/>
       </file>
       <file attr="config" category="header" name="Network\Config\Net_Config_HTTP_Server.h" version="7.1.0">
         <instance index="0">RTE\Network\Net_Config_HTTP_Server.h</instance>

@@ -21,7 +21,7 @@
 //   <i>Value FF-FF-FF-FF-FF-FF is not allowed,
 //   <i>LSB of first byte must be 0 (an ethernet Multicast bit).
 //   <i>Default: "1E-30-6C-A2-45-5E"
-#define ETH0_MAC_ADDR           "1E-30-6C-A2-45-56"
+#define ETH0_MAC_ADDR           "1E-30-6C-A2-45-58"
 
 //   <e>VLAN
 //   <i>Enable or disable Virtual LAN
@@ -40,7 +40,7 @@
 //     <s.15>IP Address
 //     <i>Static IPv4 Address in text representation
 //     <i>Default: "192.168.0.100"
-#define ETH0_IP4_ADDR           "10.48.17.106"
+#define ETH0_IP4_ADDR           "10.48.11.118"
 
 //     <s.15>Subnet mask
 //     <i>Local Subnet mask in text representation
@@ -66,7 +66,7 @@
 //     <i>This option enables fragmentation of outgoing IP datagrams,
 //     <i>and reassembling the fragments of incoming IP datagrams.
 //     <i>Default: enabled
-#define ETH0_IP4_FRAG_ENABLE    0
+#define ETH0_IP4_FRAG_ENABLE    1
 
 //       <o>MTU size <576-1500>
 //       <i>Maximum Transmission Unit in bytes
@@ -118,7 +118,7 @@
 //     <q>NetBIOS Name Service
 //     <i>When this option is enabled, the embedded host can be
 //     <i>accessed by its name on local LAN using NBNS protocol.
-#define ETH0_NBNS_ENABLE        0
+#define ETH0_NBNS_ENABLE        1
 
 //     <e>Dynamic Host Configuration
 //     <i>When this option is enabled, local IP address, Net Mask

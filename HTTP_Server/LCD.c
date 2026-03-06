@@ -348,3 +348,4 @@ void LCD_DrawAudioBar(uint8_t amplitude) {
         }
     }
 }
+

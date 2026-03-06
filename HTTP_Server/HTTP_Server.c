@@ -46,7 +46,7 @@ extern osThreadId_t TID_Led;
 bool LEDrun;
 char lcd_text[2][20+1] = { "LCD line 1",
                            "LCD line 2" };
-#include "adc.h" // Asegúrate de que este include esté arriba
+
 
 
 ADC_HandleTypeDef hadc1;

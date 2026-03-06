@@ -804,7 +804,7 @@
 
 // <e> UART8 (Universal asynchronous receiver transmitter) [Driver_USART8]
 // <i> Configuration settings for Driver_USART8 in component ::CMSIS Driver:USART
-#define RTE_UART8                       1
+#define RTE_UART8                       0
 
 //   <o> UART8_TX Pin <0=>Not Used <1=>PE1 <2=>PF9
 #define RTE_UART8_TX_ID                 0

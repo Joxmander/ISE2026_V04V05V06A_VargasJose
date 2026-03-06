@@ -7,26 +7,22 @@
   * @param None
   * @retval None
   */
-void ADC1_pins_F429ZI_config(){
-	  GPIO_InitTypeDef GPIO_InitStruct = {0};
-	__HAL_RCC_ADC1_CLK_ENABLE();
-	__HAL_RCC_GPIOC_CLK_ENABLE();
-	/*PC0     ------> ADC1_IN10
-    PC3     ------> ADC1_IN13
-    */
-    GPIO_InitStruct.Pin = GPIO_PIN_0;
-    GPIO_InitStruct.Mode = GPIO_MODE_ANALOG;
-    GPIO_InitStruct.Pull = GPIO_NOPULL;
-    HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
+void ADC1_pins_F429ZI_config(void) {
+    GPIO_InitTypeDef GPIO_InitStruct = {0};
+    __HAL_RCC_ADC1_CLK_ENABLE();
+    __HAL_RCC_GPIOA_CLK_ENABLE(); // Habilitar Puerto A para el Pot 1
+    __HAL_RCC_GPIOC_CLK_ENABLE();
 
+    // Configurar PA3 para Potenciómetro 1 (ADC1_IN3)
     GPIO_InitStruct.Pin = GPIO_PIN_3;
     GPIO_InitStruct.Mode = GPIO_MODE_ANALOG;
     GPIO_InitStruct.Pull = GPIO_NOPULL;
-    HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
-		
-		
+    HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
-  }
+    // Configurar PC0 para Potenciómetro 2 (ADC1_IN10)
+    GPIO_InitStruct.Pin = GPIO_PIN_0;
+    HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
+}
 /**
   * @brief Initialize the ADC to work with single conversions. 12 bits resolution, software start, 1 conversion
   * @param ADC handle

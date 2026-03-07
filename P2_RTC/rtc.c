@@ -112,10 +112,3 @@ void RTC_PonerAlarma_CadaMinuto(void) {
   HAL_RTC_SetAlarm_IT(&hrtc, &sAlarm, RTC_FORMAT_BCD);
 }
 
-/**
-  * @brief Esta función la llama la HAL automáticamente cuando hay interrupción de alarma
-  */
-void HAL_RTC_AlarmAEventCallback(RTC_HandleTypeDef *hrtc) {
-  alarma_activada = 1; // Activamos la bandera para que el hilo la vea
-}
-

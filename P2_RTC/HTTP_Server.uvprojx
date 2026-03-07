@@ -403,6 +403,11 @@
               <FileType>1</FileType>
               <FilePath>Web\Web.c</FilePath>
             </File>
+            <File>
+              <FileName>stm32f4xx_it.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\stm32f4xx_it.c</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>

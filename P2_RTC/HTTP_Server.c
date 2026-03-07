@@ -144,11 +144,11 @@ void Time_Thread (void *argument) {
 
   // 1. Inicializamos el reloj y la alarma nada más arrancar el hilo
   RTC_Init();
-  RTC_SetAlarm_EveryMinute();
+  RTC_PonerAlarma_CadaMinuto();
 
   while (1) {
     // 2. LEER HORA Y FECHA
-    RTC_GetTimeDate(t_buffer, d_buffer);
+    RTC_ObtenerHoraFecha(t_buffer, d_buffer);
 
     // 3. ENVIAR AL LCD (Línea 1: Hora, Línea 2: Fecha)
     memset(&msg_lcd, 0, sizeof(msg_lcd));
@@ -157,8 +157,8 @@ void Time_Thread (void *argument) {
     osMessageQueuePut(mid_messageQueueLCD, &msg_lcd, 0, 0);
 
     // 4. GESTIÓN DEL PARPADEO (LD1 - LED VERDE)
-    if (alarm_triggered) {
-      alarm_triggered = 0;
+    if (alarma_activada) {
+      alarma_activada = 0;
       estado_alarma = 1; // Empezamos el parpadeo
       tick_inicio_alarma = osKernelGetTickCount(); // Guardamos el momento exacto
     }

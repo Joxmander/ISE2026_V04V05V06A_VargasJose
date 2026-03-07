@@ -1,8 +1,24 @@
+/**
+  ******************************************************************************
+  * @file    rtc.c
+  * @author  Jose Vargas Gonzaga
+  * @brief   Implementación del módulo Real-Time Clock (RTC) para la Práctica 2.
+  *          Este archivo contiene las funciones para inicializar el reloj interno,
+  *          leer la hora/fecha y configurar alarmas periódicas por interrupción.
+  * 
+  * @details 
+  * - Hardware: STM32F429ZI (NUCLEO-F429ZI)
+  * - Fuente de reloj: LSI (Low Speed Internal) aprox. 32kHz.
+  * - Formato: 24 Horas.
+  * - Sincronización: Requiere lectura de Hora seguido de Fecha para desbloqueo.
+  ******************************************************************************
+  */
+
 #include "rtc.h"
 #include <stdio.h>
 
 RTC_HandleTypeDef hrtc;
-uint8_t alarm_triggered = 0;
+uint8_t alarma_activada = 0;
 
 /**
   * @brief Configuración de Hardware del RTC (Reloj y Energía)
@@ -70,7 +86,7 @@ void RTC_Init(void) {
 /**
   * @brief Lee hora y fecha del RTC y las guarda en strings para el LCD
   */
-void RTC_GetTimeDate(char *timeStr, char *dateStr) {
+void RTC_ObtenerHoraFecha(char *timeStr, char *dateStr) {
   RTC_TimeTypeDef sTime;
   RTC_DateTypeDef sDate;
 
@@ -86,7 +102,7 @@ void RTC_GetTimeDate(char *timeStr, char *dateStr) {
 /**
   * @brief Configura la alarma para que salte en el segundo 00 de cada minuto
   */
-void RTC_SetAlarm_EveryMinute(void) {
+void RTC_PonerAlarma_CadaMinuto(void) {
   RTC_AlarmTypeDef sAlarm = {0};
 
   sAlarm.AlarmTime.Seconds = 0x00;	// Queremos que salte en el segundo 00
@@ -100,6 +116,6 @@ void RTC_SetAlarm_EveryMinute(void) {
   * @brief Esta función la llama la HAL automáticamente cuando hay interrupción de alarma
   */
 void HAL_RTC_AlarmAEventCallback(RTC_HandleTypeDef *hrtc) {
-  alarm_triggered = 1; // Activamos la bandera para que el hilo la vea
+  alarma_activada = 1; // Activamos la bandera para que el hilo la vea
 }
 

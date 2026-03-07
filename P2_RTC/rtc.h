@@ -13,13 +13,13 @@
 
 /* Funciones para el Apartado 1 y 2 */
 void RTC_Init(void);
-void RTC_GetTimeDate(char *timeStr, char *dateStr);
-void RTC_SetAlarm_EveryMinute(void);
+void RTC_ObtenerHoraFecha(char *timeStr, char *dateStr);
+void RTC_PonerAlarma_CadaMinuto(void);
 
 /* Función para el Apartado 4 (Botón Azul) */
 void RTC_Reset_To_2000(void);
 
 /* Bandera para la alarma (se activa en la interrupción) */
-extern uint8_t alarm_triggered;
+extern uint8_t alarma_activada;
 
 #endif

@@ -1,36 +1,35 @@
-/*------------------------------------------------------------------------------
- * MDK Middleware - Component ::Network:Service
- * Copyright (c) 2004-2018 ARM Germany GmbH. All rights reserved.
- *------------------------------------------------------------------------------
- * Name:    HTTP_Server_CGI.c
- * Purpose: HTTP Server CGI Module
- * Rev.:    V6.0.0
- *----------------------------------------------------------------------------*/
+/**
+  ******************************************************************************
+  * @file    HTTP_Server_CGI.c
+  * @author  Jose Vargas Gonzaga
+  * @brief   Módulo puente entre la Web y el Hardware (CGI).
+  *          Aquí se procesan los formularios enviados por el usuario y se
+  *          preparan los datos dinámicos (Hora, Voltaje) para mostrar en web.
+  ******************************************************************************
+  */
 
 #include <stdio.h>
 #include <string.h>
-#include "cmsis_os2.h"                  // ::CMSIS:RTOS2
-#include "rl_net.h"                     // Keil.MDK-Pro::Network:CORE
+#include "cmsis_os2.h"
+#include "rl_net.h"
+#include "rtc.h"  				// Necesario para leer la hora
+#include "lcd.h"          // Necesario para enviar mensajes al LCD
+#include "Board_LED.h"    // ::Board Support:LED
 
-#include "Board_LED.h"                  // ::Board Support:LED
-
-#include "lcd.h"
 
 #if      defined (__ARMCC_VERSION) && (__ARMCC_VERSION >= 6010050)
 #pragma  clang diagnostic push
 #pragma  clang diagnostic ignored "-Wformat-nonliteral"
 #endif
 
-// http_server.c
+// Variables externas
 extern uint16_t AD_in (uint32_t ch);
-extern uint8_t  get_button (void);
-
 extern bool LEDrun;
 extern char lcd_text[2][20+1];
-//extern osThreadId_t TID_Display;
+extern uint8_t  get_button (void);
 
-// Local variables.
-static uint8_t P2;
+// Variables Locales.
+static uint8_t P2;		// Variable local para guardar el estado de los 8 LEDs de la placa mbed
 static uint8_t ip_addr[NET_ADDR_IP6_LEN];
 static char    ip_string[40];
 
@@ -41,7 +40,10 @@ typedef struct {
 } MY_BUF;
 #define MYBUF(p)        ((MY_BUF *)p)
 
-// Process query string received by GET request.
+/*----------------------------------------------------------------------------
+  1. netCGI_ProcessQuery: Procesa datos enviados por la URL (GET)
+  Normalmente se usa para configurar la IP desde la web. 
+ *---------------------------------------------------------------------------*/
 void netCGI_ProcessQuery (const char *qstr) {
   netIF_Option opt = netIF_OptionMAC_Address;
   int16_t      typ = 0;
@@ -95,102 +97,23 @@ void netCGI_ProcessQuery (const char *qstr) {
   } while (qstr);
 }
 
-// Process data received by POST request.
-// Type code: - 0 = www-url-encoded form data.
-//            - 1 = filename for file upload (null-terminated string).
-//            - 2 = file upload raw data.
-//            - 3 = end of file upload (file close requested).
-//            - 4 = any XML encoded POST data (single or last stream).
-//            - 5 = the same as 4, but with more XML data to follow.
-//void netCGI_ProcessData (uint8_t code, const char *data, uint32_t len) {
-//  char var[40],passw[12];
 
-//  if (code != 0) {
-//    // Ignore all other codes
-//    return;
-//  }
 
-//  P2 = 0;
-//  LEDrun = true;
-//  if (len == 0) {
-//    // No data or all items (radio, checkbox) are off
-//    LED_SetOut (P2);
-//    return;
-//  }
-//  passw[0] = 1;
-//  do {
-//    // Parse all parameters
-//    data = netCGI_GetEnvVar (data, var, sizeof (var));
-//    if (var[0] != 0) {
-//      // First character is non-null, string exists
-//      if (strcmp (var, "led0=on") == 0) {
-//        P2 |= 0x01;
-//      }
-//      else if (strcmp (var, "led1=on") == 0) {
-//        P2 |= 0x02;
-//      }
-//      else if (strcmp (var, "led2=on") == 0) {
-//        P2 |= 0x04;
-//      }
-//      else if (strcmp (var, "led3=on") == 0) {
-//        P2 |= 0x08;
-//      }
-//      else if (strcmp (var, "led4=on") == 0) {
-//        P2 |= 0x10;
-//      }
-//      else if (strcmp (var, "led5=on") == 0) {
-//        P2 |= 0x20;
-//      }
-//      else if (strcmp (var, "led6=on") == 0) {
-//        P2 |= 0x40;
-//      }
-//      else if (strcmp (var, "led7=on") == 0) {
-//        P2 |= 0x80;
-//      }
-//      else if (strcmp (var, "ctrl=Browser") == 0) {
-//        LEDrun = false;
-//      }
-//      else if ((strncmp (var, "pw0=", 4) == 0) ||
-//               (strncmp (var, "pw2=", 4) == 0)) {
-//        // Change password, retyped password
-//        if (netHTTPs_LoginActive()) {
-//          if (passw[0] == 1) {
-//            strcpy (passw, var+4);
-//          }
-//          else if (strcmp (passw, var+4) == 0) {
-//            // Both strings are equal, change the password
-//            netHTTPs_SetPassword (passw);
-//          }
-//        }
-//      }
-//      else if (strncmp (var, "lcd1=", 5) == 0) {
-//        // LCD Module line 1 text
-//        strcpy (lcd_text[0], var+5);
-//        osThreadFlagsSet (TID_Display, 0x01);
-//      }
-//      else if (strncmp (var, "lcd2=", 5) == 0) {
-//        // LCD Module line 2 text
-//        strcpy (lcd_text[1], var+5);
-//        osThreadFlagsSet (TID_Display, 0x01);
-//      }
-//    }
-//  } while (data);
-//  LED_SetOut (P2);
-//}
-
+/*----------------------------------------------------------------------------
+  2. netCGI_ProcessData: Procesa datos enviados por formularios (POST)
+  Se ejecuta cuando el usuario pulsa "Send" o cambia un Checkbox en la web.
+ *---------------------------------------------------------------------------*/
 void netCGI_ProcessData (uint8_t code, const char *data, uint32_t len) {
   char var[40], passw[12];
-  // Variable para tu mensaje de LCD
-  MSGQUEUE_OBJ_LCD_t msg_lcd; 
-  // Bandera para saber si tenemos que actualizar el LCD al final
-  bool update_lcd = false;
+  MSGQUEUE_OBJ_LCD_t msg_lcd; // Variable para mensaje de LCD
+  bool update_lcd = false;		// Bandera para saber si tenemos que actualizar el LCD al final
 
   if (code != 0) {
     return; // Ignoramos si no es un formulario web
   }
 
-  P2 = 0;
-  LEDrun = true;
+  P2 = 0;           // Reset de estado de LEDs (se reconstruye con el formulario)
+  LEDrun = true;    // Por defecto, permitimos que el hilo de BlinkLed corra
 
   if (len == 0) {
     LED_SetOut (P2);
@@ -204,7 +127,7 @@ void netCGI_ProcessData (uint8_t code, const char *data, uint32_t len) {
     data = netCGI_GetEnvVar (data, var, sizeof (var));
     if (var[0] != 0) {
       
-      /* --- GESTIÓN DE LEDS (Igual que antes) --- */
+      /* --- GESTIÓN DE LEDS  --- */
       if      (strcmp (var, "led0=on") == 0) P2 |= 0x01;
       else if (strcmp (var, "led1=on") == 0) P2 |= 0x02;
       else if (strcmp (var, "led2=on") == 0) P2 |= 0x04;
@@ -259,7 +182,11 @@ void netCGI_ProcessData (uint8_t code, const char *data, uint32_t len) {
   }
 }
 
-// Generate dynamic web data from a script line.
+/*----------------------------------------------------------------------------
+  3. netCGI_Script: El "Generador" de contenido dinámico.
+  Se ejecuta cuando el servidor lee una línea que empieza por 't' en un .cgi.
+  Sustituye los comandos especiales por datos reales del micro.
+ *---------------------------------------------------------------------------*/
 uint32_t netCGI_Script (const char *env, char *buf, uint32_t buflen, uint32_t *pcgi) {
   int32_t socket;
   netTCP_State state;
@@ -270,6 +197,8 @@ uint32_t netCGI_Script (const char *env, char *buf, uint32_t buflen, uint32_t *p
   static uint32_t adv;
   netIF_Option opt = netIF_OptionMAC_Address;
   int16_t      typ = 0;
+	
+	char t_str[20], d_str[20];
 
   switch (env[0]) {
     // Analyze a 'c' script line starting position 2
@@ -324,7 +253,7 @@ uint32_t netCGI_Script (const char *env, char *buf, uint32_t buflen, uint32_t *p
       netIP_ntoa (typ, ip_addr, ip_string, sizeof(ip_string));
       len = (uint32_t)sprintf (buf, &env[5], ip_string);
       break;
-
+    // --- CASO 'b': Estado de los LEDs ---
     case 'b':
       // LED control from 'led.cgi'
       if (env[2] == 'c') {
@@ -415,7 +344,7 @@ uint32_t netCGI_Script (const char *env, char *buf, uint32_t buflen, uint32_t *p
       }
       len = (uint32_t)sprintf (buf, &env[2], lang, netHTTPs_GetLanguage());
       break;
-
+		// --- CASO 'f': Mostrar texto actual del LCD en la web ---
     case 'f':
       // LCD Module control from 'lcd.cgi'
       switch (env[2]) {
@@ -427,7 +356,7 @@ uint32_t netCGI_Script (const char *env, char *buf, uint32_t buflen, uint32_t *p
           break;
       }
       break;
-
+		// --- CASO 'g': Entrada del ADC (Potenciómetro) ---
     case 'g':
       // AD Input from 'ad.cgi'
       switch (env[2]) {
@@ -444,7 +373,12 @@ uint32_t netCGI_Script (const char *env, char *buf, uint32_t buflen, uint32_t *p
           break;
       }
       break;
-
+    // --- CASO 't' (NUEVO P2): Mostrar Hora y Fecha del RTC ---
+    case 't':
+      RTC_ObtenerHoraFecha(t_str, d_str); // Llamamos a tu biblioteca rtc.c
+      if (env[1] == 'h') len = sprintf (buf, "%s", t_str); // Si pides 'th' mandamos hora
+      if (env[1] == 'f') len = sprintf (buf, "%s", d_str); // Si pides 'tf' mandamos fecha
+      break;
     case 'x':
       // AD Input from 'ad.cgx'
       adv = AD_in (0);

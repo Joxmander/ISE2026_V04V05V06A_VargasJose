@@ -16,6 +16,7 @@
 
 #include "rtc.h"
 #include <stdio.h>
+#include <time.h>		//Libreria estandar del tiempo
 
 RTC_HandleTypeDef hrtc;
 uint8_t alarma_activada = 0;
@@ -110,5 +111,96 @@ void RTC_PonerAlarma_CadaMinuto(void) {
   sAlarm.AlarmMask = RTC_ALARMMASK_HOURS | RTC_ALARMMASK_MINUTES | RTC_ALARMMASK_DATEWEEKDAY;
   sAlarm.Alarm = RTC_ALARM_A;	//Tambien podemos usar otra simultaneamente, RTC_ALARM_B
   HAL_RTC_SetAlarm_IT(&hrtc, &sAlarm, RTC_FORMAT_BCD);
+}
+
+/**
+ * @brief Convierto los segundos que me manda internet a hora real y actualizo mi RTC
+ */
+void RTC_ActualizarDesdeUnix(uint32_t segundos_unix) {
+    // 1. CORRECCIÓN DEL EFECTO 1900
+    // Si el servidor envía los segundos desde 1900 en lugar de 1970, el número es inmenso.
+    // Le restamos 70 años en segundos para normalizarlo al estándar UNIX.
+    if (segundos_unix > 2208988800UL) {
+        segundos_unix -= 2208988800UL;
+    }
+
+    // 2. HUSO HORARIO: Sumamos 1 hora (3600 segundos) por estar en España (UTC+1)
+    uint32_t tiempo_local = segundos_unix + 3600;
+
+    // 3. EXTRAER HORA, MINUTOS Y SEGUNDOS
+    uint32_t segundos_hoy = tiempo_local % 86400; // Segundos transcurridos solo en el día de hoy
+    
+    RTC_TimeTypeDef sTime = {0};
+    sTime.Hours   = segundos_hoy / 3600;
+    sTime.Minutes = (segundos_hoy % 3600) / 60;
+    sTime.Seconds = segundos_hoy % 60;
+    HAL_RTC_SetTime(&hrtc, &sTime, RTC_FORMAT_BIN);
+
+    // 4. EXTRAER FECHA MATEMÁTICAMENTE (¡Adiós gmtime!)
+    uint32_t dias_totales = tiempo_local / 86400;
+    uint32_t anio = 1970;
+
+    // Calculamos el año restando días (teniendo en cuenta los bisiestos)
+    while (1) {
+        uint32_t dias_este_anio = ((anio % 4 == 0 && anio % 100 != 0) || (anio % 400 == 0)) ? 366 : 365;
+        if (dias_totales >= dias_este_anio) {
+            dias_totales -= dias_este_anio;
+            anio++;
+        } else {
+            break;
+        }
+    }
+
+    // Calculamos el mes
+    uint8_t mes = 1;
+    uint32_t dias_por_mes[] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
+    if ((anio % 4 == 0 && anio % 100 != 0) || (anio % 400 == 0)) {
+        dias_por_mes[1] = 29; // Corregir Febrero si es bisiesto
+    }
+
+    for (int i = 0; i < 12; i++) {
+        if (dias_totales >= dias_por_mes[i]) {
+            dias_totales -= dias_por_mes[i];
+            mes++;
+        } else {
+            break;
+        }
+    }
+
+    // El resto de días es el día del mes
+    uint8_t dia = dias_totales + 1;
+
+    // Calculamos el Día de la semana (El 1 Ene de 1970 fue Jueves = 4)
+    uint8_t dia_semana = (( (tiempo_local / 86400) + 3 ) % 7 ) + 1; // 1=Lunes, 7=Domingo
+
+    // 5. ESCRIBIR EN EL HARDWARE
+    RTC_DateTypeDef sDate = {0};
+    sDate.WeekDay = dia_semana;
+    sDate.Month   = mes;
+    sDate.Date    = dia;
+    sDate.Year    = anio - 2000; // Al hardware solo le guardamos las últimas 2 cifras (2026 -> 26)
+    
+    HAL_RTC_SetDate(&hrtc, &sDate, RTC_FORMAT_BIN);
+}
+
+/**
+ * @brief Para probar si mi SNTP funciona y me corrige, pongo el reloj a las 00:00 del 01/01/2000.
+ */
+void RTC_Reset_A_2000(void) {
+  RTC_TimeTypeDef sTime = {0};
+  RTC_DateTypeDef sDate = {0};
+
+  // Pongo la hora completamente a cero
+  sTime.Hours = 0;
+  sTime.Minutes = 0;
+  sTime.Seconds = 0;
+  HAL_RTC_SetTime(&hrtc, &sTime, RTC_FORMAT_BIN);
+
+  // Pongo la fecha al 1 de enero de 2000 (históricamente cayó en sábado)
+  sDate.WeekDay = RTC_WEEKDAY_SATURDAY; 
+  sDate.Month = RTC_MONTH_JANUARY;
+  sDate.Date = 1;
+  sDate.Year = 0; // El año 2000 es el 00 para este reloj
+  HAL_RTC_SetDate(&hrtc, &sDate, RTC_FORMAT_BIN);
 }
 

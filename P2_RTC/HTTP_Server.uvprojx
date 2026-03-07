@@ -672,6 +672,12 @@
           <targetInfo name="Debug"/>
         </targetInfos>
       </component>
+      <component Cbundle="MDK-Pro" Cclass="Network" Cgroup="Service" Csub="DNS Client" Cvendor="Keil" Cversion="7.15.0" condition="Network UDP">
+        <package name="MDK-Middleware" schemaVersion="1.4" url="http://www.keil.com/pack/" vendor="Keil" version="7.13.0"/>
+        <targetInfos>
+          <targetInfo name="Debug"/>
+        </targetInfos>
+      </component>
       <component Cbundle="MDK-Pro" Cclass="Network" Cgroup="Service" Csub="SNTP Client" Cvendor="Keil" Cversion="7.15.0" condition="Network UDP">
         <package name="MDK-Middleware" schemaVersion="1.4" url="http://www.keil.com/pack/" vendor="Keil" version="7.13.0"/>
         <targetInfos>
@@ -895,6 +901,14 @@
       <file attr="config" category="source" name="Network\Config\Net_Config.c" version="7.1.0">
         <instance index="0">RTE\Network\Net_Config.c</instance>
         <component Cbundle="MDK-Pro" Cclass="Network" Cgroup="CORE" Cvariant="IPv4/IPv6 Debug" Cvendor="Keil" Cversion="7.15.0" condition="CMSIS Core with RTOS and Event Recorder"/>
+        <package name="MDK-Middleware" schemaVersion="1.4" url="http://www.keil.com/pack/" vendor="Keil" version="7.13.0"/>
+        <targetInfos>
+          <targetInfo name="Debug"/>
+        </targetInfos>
+      </file>
+      <file attr="config" category="header" name="Network\Config\Net_Config_DNS_Client.h" version="5.0.0">
+        <instance index="0">RTE\Network\Net_Config_DNS_Client.h</instance>
+        <component Cbundle="MDK-Pro" Cclass="Network" Cgroup="Service" Csub="DNS Client" Cvendor="Keil" Cversion="7.15.0" condition="Network UDP"/>
         <package name="MDK-Middleware" schemaVersion="1.4" url="http://www.keil.com/pack/" vendor="Keil" version="7.13.0"/>
         <targetInfos>
           <targetInfo name="Debug"/>

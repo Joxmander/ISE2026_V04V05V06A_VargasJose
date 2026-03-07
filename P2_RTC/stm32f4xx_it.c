@@ -70,10 +70,16 @@ extern RTC_HandleTypeDef hrtc;
 /******************************************************************************/
 
 /**
-  * @brief Esta función la llama la HAL automáticamente cuando hay interrupción de alarma
+  * @brief Callback que se ejecuta cuando salta la alarma
   */
 void HAL_RTC_AlarmAEventCallback(RTC_HandleTypeDef *hrtc) {
-  alarma_activada = 1; // Activamos la bandera para que el hilo la vea
+    if (periodo_actual == ALARMA_CADA_5_MIN) {
+        RTC_TimeTypeDef sTime;
+        HAL_RTC_GetTime(hrtc, &sTime, RTC_FORMAT_BIN);
+        if (sTime.Minutes % 5 != 0) return; // Solo actuo si es múltiplo de 5
+    }
+    
+    alarma_activada = 1; // Bandera para el bucle principal
 }
 
 /**

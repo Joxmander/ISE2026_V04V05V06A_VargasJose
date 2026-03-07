@@ -159,16 +159,16 @@
           <Type>0</Type>
           <LineNumber>401</LineNumber>
           <EnabledFlag>1</EnabledFlag>
-          <Address>134222636</Address>
+          <Address>0</Address>
           <ByteObject>0</ByteObject>
           <HtxType>0</HtxType>
           <ManyObjects>0</ManyObjects>
           <SizeOfObject>0</SizeOfObject>
           <BreakByAccess>0</BreakByAccess>
-          <BreakIfRCount>1</BreakIfRCount>
+          <BreakIfRCount>0</BreakIfRCount>
           <Filename>.\HTTP_Server_CGI.c</Filename>
           <ExecCommand></ExecCommand>
-          <Expression>\\HTTP_Server\HTTP_Server_CGI.c\401</Expression>
+          <Expression></Expression>
         </Bp>
       </Breakpoint>
       <MemoryWindow1>
@@ -330,7 +330,7 @@
 
   <Group>
     <GroupName>Web files</GroupName>
-    <tvExp>0</tvExp>
+    <tvExp>1</tvExp>
     <tvExpOptDlg>0</tvExpOptDlg>
     <cbSel>0</cbSel>
     <RteFlg>0</RteFlg>

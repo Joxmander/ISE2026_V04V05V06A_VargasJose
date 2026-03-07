@@ -10,6 +10,7 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 #include "cmsis_os2.h"
 #include "rl_net.h"
 #include "rtc.h"  				// Necesario para leer la hora
@@ -28,6 +29,12 @@ extern bool LEDrun;
 extern char lcd_text[2][20+1];
 extern uint8_t  get_button (void);
 
+/* --- VARIABLES EXTERNAS DEL APARTADO 5 --- */
+extern uint8_t sntp_server_index;
+extern RTC_PeriodoAlarma_t periodo_seleccionado;
+extern uint8_t alarma_habilitada_web;
+extern const char* sntp_servers[];
+
 // Variables Locales.
 static uint8_t P2;		// Variable local para guardar el estado de los 8 LEDs de la placa mbed
 static uint8_t ip_addr[NET_ADDR_IP6_LEN];
@@ -45,6 +52,8 @@ typedef struct {
   Normalmente se usa para configurar la IP desde la web. 
  *---------------------------------------------------------------------------*/
 void netCGI_ProcessQuery (const char *qstr) {
+	
+	
   netIF_Option opt = netIF_OptionMAC_Address;
   int16_t      typ = 0;
   char var[40];
@@ -99,6 +108,90 @@ void netCGI_ProcessQuery (const char *qstr) {
 
 
 
+///*----------------------------------------------------------------------------
+//  2. netCGI_ProcessData: Procesa datos enviados por formularios (POST)
+//  Se ejecuta cuando el usuario pulsa "Send" o cambia un Checkbox en la web.
+// *---------------------------------------------------------------------------*/
+//void netCGI_ProcessData (uint8_t code, const char *data, uint32_t len) {
+//  char var[40], passw[12];
+//  MSGQUEUE_OBJ_LCD_t msg_lcd; // Variable para mensaje de LCD
+//  bool update_lcd = false;		// Bandera para saber si tenemos que actualizar el LCD al final
+
+//  if (code != 0) {
+//    return; // Ignoramos si no es un formulario web
+//  }
+
+//  P2 = 0;           // Reset de estado de LEDs (se reconstruye con el formulario)
+//  LEDrun = true;    // Por defecto, permitimos que el hilo de BlinkLed corra
+
+//  if (len == 0) {
+//    LED_SetOut (P2);
+//    return;
+//  }
+
+//  passw[0] = 1;
+
+//  do {
+//    // Extraemos la siguiente variable del formulario
+//    data = netCGI_GetEnvVar (data, var, sizeof (var));
+//    if (var[0] != 0) {
+//      
+//      /* --- GESTIÓN DE LEDS  --- */
+//      if      (strcmp (var, "led0=on") == 0) P2 |= 0x01;
+//      else if (strcmp (var, "led1=on") == 0) P2 |= 0x02;
+//      else if (strcmp (var, "led2=on") == 0) P2 |= 0x04;
+//      else if (strcmp (var, "led3=on") == 0) P2 |= 0x08;
+//      else if (strcmp (var, "led4=on") == 0) P2 |= 0x10;
+//      else if (strcmp (var, "led5=on") == 0) P2 |= 0x20;
+//      else if (strcmp (var, "led6=on") == 0) P2 |= 0x40;
+//      else if (strcmp (var, "led7=on") == 0) P2 |= 0x80;
+//      else if (strcmp (var, "ctrl=Browser") == 0) LEDrun = false;
+
+//      /* --- GESTIÓN DE PASSWORD (Opcional) --- */
+//      else if ((strncmp (var, "pw0=", 4) == 0) || (strncmp (var, "pw2=", 4) == 0)) {
+//        if (netHTTPs_LoginActive()) {
+//          if (passw[0] == 1) strcpy (passw, var+4);
+//          else if (strcmp (passw, var+4) == 0) netHTTPs_SetPassword (passw);
+//        }
+//      }
+
+//      /* --- GESTIÓN DE TU LCD PERSONALIZADO --- */
+//      else if (strncmp (var, "lcd1=", 5) == 0) {
+//        // Guardamos el texto en el array global por si acaso
+//        strcpy (lcd_text[0], var+5); 
+//        update_lcd = true;
+//      }
+//      else if (strncmp (var, "lcd2=", 5) == 0) {
+//        // Guardamos el texto en el array global
+//        strcpy (lcd_text[1], var+5); 
+//        update_lcd = true;
+//      }
+//    }
+//  } while (data);
+
+//  // 1. Aplicamos cambios a los LEDs
+//  LED_SetOut (P2);
+
+//  // 2. Si ha llegado texto nuevo para el LCD, enviamos el mensaje a la cola IPC
+//  if (update_lcd) {
+//    // Limpiamos la estructura de mensaje
+//    memset(&msg_lcd, 0, sizeof(MSGQUEUE_OBJ_LCD_t));
+//    
+//    // Copiamos los textos recibidos a la estructura del mensaje
+//    strncpy(msg_lcd.Lin1, lcd_text[0], sizeof(msg_lcd.Lin1) - 1);
+//    strncpy(msg_lcd.Lin2, lcd_text[1], sizeof(msg_lcd.Lin2) - 1);
+//    
+//    // Opcional: podrías poner valores por defecto para barra/amplitud si quieres
+//    msg_lcd.barra = 0;
+//    msg_lcd.amplitud = 0;
+
+//    // ENVIAMOS A LA COLA (IPC)
+//    // mid_messageQueueLCD debe estar declarada como 'extern' en lcd.h
+//    osMessageQueuePut(mid_messageQueueLCD, &msg_lcd, 0, 0);
+//  }
+//}
+
+
 /*----------------------------------------------------------------------------
   2. netCGI_ProcessData: Procesa datos enviados por formularios (POST)
   Se ejecuta cuando el usuario pulsa "Send" o cambia un Checkbox en la web.
@@ -106,7 +199,7 @@ void netCGI_ProcessQuery (const char *qstr) {
 void netCGI_ProcessData (uint8_t code, const char *data, uint32_t len) {
   char var[40], passw[12];
   MSGQUEUE_OBJ_LCD_t msg_lcd; // Variable para mensaje de LCD
-  bool update_lcd = false;		// Bandera para saber si tenemos que actualizar el LCD al final
+  bool update_lcd = false;    // Bandera para saber si tenemos que actualizar el LCD al final
 
   if (code != 0) {
     return; // Ignoramos si no es un formulario web
@@ -121,6 +214,10 @@ void netCGI_ProcessData (uint8_t code, const char *data, uint32_t len) {
   }
 
   passw[0] = 1;
+
+  // --- NUEVO APARTADO 5: Variable local para saber si nos llegó el checkbox de la alarma ---
+  // Por defecto asumo que está apagada, si en el formulario viene "alm_en=on", la encenderé.
+  uint8_t alarma_en_formulario = 0;
 
   do {
     // Extraemos la siguiente variable del formulario
@@ -157,8 +254,30 @@ void netCGI_ProcessData (uint8_t code, const char *data, uint32_t len) {
         strcpy (lcd_text[1], var+5); 
         update_lcd = true;
       }
+
+      /* --- NUEVA GESTIÓN APARTADO 5 (SNTP Y ALARMA RTC) --- */
+      
+      // 1. Capturo el servidor SNTP (0 o 1)
+      else if (strncmp(var, "sntp=", 5) == 0) {
+        sntp_server_index = (uint8_t)atoi(&var[5]);
+      }
+      
+      // 2. Veo si el checkbox de la alarma ha llegado marcado
+      else if (strcmp(var, "alm_en=on") == 0) {
+        alarma_en_formulario = 1;
+      }
+      
+      // 3. Capturo el periodo de la alarma
+      else if (strncmp(var, "periodo=", 8) == 0) {
+        periodo_seleccionado = (RTC_PeriodoAlarma_t)atoi(&var[8]);
+        // ¡Importante! Actualizo el hardware del RTC al momento con tu función
+        RTC_ConfigurarAlarma(periodo_seleccionado);
+      }
     }
   } while (data);
+
+  // --- NUEVO APARTADO 5: Actualizamos la variable global con el estado del checkbox ---
+  alarma_habilitada_web = alarma_en_formulario;
 
   // 1. Aplicamos cambios a los LEDs
   LED_SetOut (P2);
@@ -182,6 +301,245 @@ void netCGI_ProcessData (uint8_t code, const char *data, uint32_t len) {
   }
 }
 
+
+///*----------------------------------------------------------------------------
+//  3. netCGI_Script: El "Generador" de contenido dinámico.
+//  Se ejecuta cuando el servidor lee una línea que empieza por 't' en un .cgi.
+//  Sustituye los comandos especiales por datos reales del micro, los símbolos 
+//  % por datos reales.
+// *---------------------------------------------------------------------------*/
+//uint32_t netCGI_Script (const char *env, char *buf, uint32_t buflen, uint32_t *pcgi) {
+//  int32_t socket;
+//  netTCP_State state;
+//  NET_ADDR r_client;
+//  const char *lang;
+//  uint32_t len = 0U;
+//  uint8_t id;
+//  static uint32_t adv;
+//  netIF_Option opt = netIF_OptionMAC_Address;
+//  int16_t      typ = 0;
+//	
+//	char t_str[20], d_str[20];
+
+//  switch (env[0]) {
+//    // Analyze a 'c' script line starting position 2
+//    case 'a' :
+//      // Network parameters from 'network.cgi'
+//      switch (env[3]) {
+//        case '4': typ = NET_ADDR_IP4; break;
+//        case '6': typ = NET_ADDR_IP6; break;
+
+//        default: return (0);
+//      }
+//      
+//      switch (env[2]) {
+//        case 'l':
+//          // Link-local address
+//          if (env[3] == '4') { return (0);                             }
+//          else               { opt = netIF_OptionIP6_LinkLocalAddress; }
+//          break;
+
+//        case 'i':
+//          // Write local IP address (IPv4 or IPv6)
+//          if (env[3] == '4') { opt = netIF_OptionIP4_Address;       }
+//          else               { opt = netIF_OptionIP6_StaticAddress; }
+//          break;
+
+//        case 'm':
+//          // Write local network mask
+//          if (env[3] == '4') { opt = netIF_OptionIP4_SubnetMask; }
+//          else               { return (0);                       }
+//          break;
+
+//        case 'g':
+//          // Write default gateway IP address
+//          if (env[3] == '4') { opt = netIF_OptionIP4_DefaultGateway; }
+//          else               { opt = netIF_OptionIP6_DefaultGateway; }
+//          break;
+
+//        case 'p':
+//          // Write primary DNS server IP address
+//          if (env[3] == '4') { opt = netIF_OptionIP4_PrimaryDNS; }
+//          else               { opt = netIF_OptionIP6_PrimaryDNS; }
+//          break;
+
+//        case 's':
+//          // Write secondary DNS server IP address
+//          if (env[3] == '4') { opt = netIF_OptionIP4_SecondaryDNS; }
+//          else               { opt = netIF_OptionIP6_SecondaryDNS; }
+//          break;
+//      }
+
+//      netIF_GetOption (NET_IF_CLASS_ETH, opt, ip_addr, sizeof(ip_addr));
+//      netIP_ntoa (typ, ip_addr, ip_string, sizeof(ip_string));
+//      len = (uint32_t)sprintf (buf, &env[5], ip_string);
+//      break;
+//    // --- CASO 'b': Estado de los LEDs ---
+//    case 'b':
+//      // LED control from 'led.cgi'
+//      if (env[2] == 'c') {
+//        // Select Control
+//        len = (uint32_t)sprintf (buf, &env[4], LEDrun ?     ""     : "selected",
+//                                               LEDrun ? "selected" :    ""     );
+//        break;
+//      }
+//      // LED CheckBoxes
+//      id = env[2] - '0';
+//      if (id > 7) {
+//        id = 0;
+//      }
+//      id = (uint8_t)(1U << id);
+//      len = (uint32_t)sprintf (buf, &env[4], (P2 & id) ? "checked" : "");
+//      break;
+
+//    case 'c':
+//      // TCP status from 'tcp.cgi'
+//      while ((uint32_t)(len + 150) < buflen) {
+//        socket = ++MYBUF(pcgi)->idx;
+//        state  = netTCP_GetState (socket);
+
+//        if (state == netTCP_StateINVALID) {
+//          /* Invalid socket, we are done */
+//          return ((uint32_t)len);
+//        }
+
+//        // 'sprintf' format string is defined here
+//        len += (uint32_t)sprintf (buf+len,   "<tr align=\"center\">");
+//        if (state <= netTCP_StateCLOSED) {
+//          len += (uint32_t)sprintf (buf+len, "<td>%d</td><td>%d</td><td>-</td><td>-</td>"
+//                                             "<td>-</td><td>-</td></tr>\r\n",
+//                                             socket,
+//                                             netTCP_StateCLOSED);
+//        }
+//        else if (state == netTCP_StateLISTEN) {
+//          len += (uint32_t)sprintf (buf+len, "<td>%d</td><td>%d</td><td>%d</td><td>-</td>"
+//                                             "<td>-</td><td>-</td></tr>\r\n",
+//                                             socket,
+//                                             netTCP_StateLISTEN,
+//                                             netTCP_GetLocalPort(socket));
+//        }
+//        else {
+//          netTCP_GetPeer (socket, &r_client, sizeof(r_client));
+
+//          netIP_ntoa (r_client.addr_type, r_client.addr, ip_string, sizeof (ip_string));
+//          
+//          len += (uint32_t)sprintf (buf+len, "<td>%d</td><td>%d</td><td>%d</td>"
+//                                             "<td>%d</td><td>%s</td><td>%d</td></tr>\r\n",
+//                                             socket, netTCP_StateLISTEN, netTCP_GetLocalPort(socket),
+//                                             netTCP_GetTimer(socket), ip_string, r_client.port);
+//        }
+//      }
+//      /* More sockets to go, set a repeat flag */
+//      len |= (1u << 31);
+//      break;
+
+//    case 'd':
+//      // System password from 'system.cgi'
+//      switch (env[2]) {
+//        case '1':
+//          len = (uint32_t)sprintf (buf, &env[4], netHTTPs_LoginActive() ? "Enabled" : "Disabled");
+//          break;
+//        case '2':
+//          len = (uint32_t)sprintf (buf, &env[4], netHTTPs_GetPassword());
+//          break;
+//      }
+//      break;
+
+//    case 'e':
+//      // Browser Language from 'language.cgi'
+//      lang = netHTTPs_GetLanguage();
+//      if      (strncmp (lang, "en", 2) == 0) {
+//        lang = "English";
+//      }
+//      else if (strncmp (lang, "de", 2) == 0) {
+//        lang = "German";
+//      }
+//      else if (strncmp (lang, "fr", 2) == 0) {
+//        lang = "French";
+//      }
+//      else if (strncmp (lang, "sl", 2) == 0) {
+//        lang = "Slovene";
+//      }
+//      else {
+//        lang = "Unknown";
+//      }
+//      len = (uint32_t)sprintf (buf, &env[2], lang, netHTTPs_GetLanguage());
+//      break;
+////		// --- CASO 'f': Mostrar texto actual del LCD en la web ---
+////    case 'f':
+////      // LCD Module control from 'lcd.cgi'
+////      switch (env[2]) {
+////        case '1':
+////          len = (uint32_t)sprintf (buf, &env[4], lcd_text[0]);
+////          break;
+////        case '2':
+////          len = (uint32_t)sprintf (buf, &env[4], lcd_text[1]);
+////          break;
+////      }
+////      break;
+//		// --- CASO 'g': Entrada del ADC (Potenciómetro) ---
+//    case 'g':
+//      // AD Input from 'ad.cgi'
+//      switch (env[2]) {
+//        case '1':
+//          adv = AD_in (0);
+//          len = (uint32_t)sprintf (buf, &env[4], adv);
+//          break;
+//        case '2':
+//          len = (uint32_t)sprintf (buf, &env[4], (double)((float)adv*3.3f)/4096);
+//          break;
+//        case '3':
+//          adv = (adv * 100) / 4096;
+//          len = (uint32_t)sprintf (buf, &env[4], adv);
+//          break;
+//      }
+//      break;
+////    // CASO 'h': Responde a la etiqueta %h en time.cgi
+////    case 'h':
+////      RTC_ObtenerHoraFecha(t_str, d_str); // Llama a tu librería rtc.c
+////      len = sprintf(buf, "%s", t_str); // Copia la hora al buffer que se envía a la web
+////      break;
+
+//    // --- CASO 't' Mostrar Hora y Fecha del RTC ---
+////   case 't': 
+////    {
+////      RTC_ObtenerHoraFecha(t_str, d_str);
+////      
+////      // Si la etiqueta es %t1 -> Mandamos la Hora
+////      if (env[1] == '1') {
+////        len = (uint32_t)sprintf(buf, "%s", t_str);
+////      }
+////      // Si la etiqueta es %t2 -> Mandamos la Fecha
+////      else if (env[1] == '2') {
+////        len = (uint32_t)sprintf(buf, "%s", d_str);
+////      }
+////    }
+////    break;
+
+//// En netCGI_Script, añade una comprobación de seguridad
+//case 'h': 
+//  RTC_ObtenerHoraFecha(t_str, d_str);
+//  if (env[1] == '1') len = (uint32_t)sprintf(buf, "%s", t_str);
+//  else if (env[1] == '2') len = (uint32_t)sprintf(buf, "%s", d_str);
+//  break;
+//		
+//		
+//    case 'x':
+//      // AD Input from 'ad.cgx'
+//      adv = AD_in (0);
+//      len = (uint32_t)sprintf (buf, &env[1], adv);
+//      break;
+
+//    case 'y':
+//      // Button state from 'button.cgx'
+//      len = (uint32_t)sprintf (buf, "<checkbox><id>button%c</id><on>%s</on></checkbox>",
+//                               env[1], (get_button () & (1 << (env[1]-'0'))) ? "true" : "false");
+//      break;
+//  }
+//  return (len);
+//}
+
+
 /*----------------------------------------------------------------------------
   3. netCGI_Script: El "Generador" de contenido dinámico.
   Se ejecuta cuando el servidor lee una línea que empieza por 't' en un .cgi.
@@ -198,8 +556,8 @@ uint32_t netCGI_Script (const char *env, char *buf, uint32_t buflen, uint32_t *p
   static uint32_t adv;
   netIF_Option opt = netIF_OptionMAC_Address;
   int16_t      typ = 0;
-	
-	char t_str[20], d_str[20];
+    
+    char t_str[20], d_str[20];
 
   switch (env[0]) {
     // Analyze a 'c' script line starting position 2
@@ -215,7 +573,7 @@ uint32_t netCGI_Script (const char *env, char *buf, uint32_t buflen, uint32_t *p
       switch (env[2]) {
         case 'l':
           // Link-local address
-          if (env[3] == '4') { return (0);                             }
+          if (env[3] == '4') { return (0);                               }
           else               { opt = netIF_OptionIP6_LinkLocalAddress; }
           break;
 
@@ -345,7 +703,7 @@ uint32_t netCGI_Script (const char *env, char *buf, uint32_t buflen, uint32_t *p
       }
       len = (uint32_t)sprintf (buf, &env[2], lang, netHTTPs_GetLanguage());
       break;
-//		// --- CASO 'f': Mostrar texto actual del LCD en la web ---
+//      // --- CASO 'f': Mostrar texto actual del LCD en la web ---
 //    case 'f':
 //      // LCD Module control from 'lcd.cgi'
 //      switch (env[2]) {
@@ -357,7 +715,7 @@ uint32_t netCGI_Script (const char *env, char *buf, uint32_t buflen, uint32_t *p
 //          break;
 //      }
 //      break;
-		// --- CASO 'g': Entrada del ADC (Potenciómetro) ---
+        // --- CASO 'g': Entrada del ADC (Potenciómetro) ---
     case 'g':
       // AD Input from 'ad.cgi'
       switch (env[2]) {
@@ -402,8 +760,40 @@ case 'h':
   if (env[1] == '1') len = (uint32_t)sprintf(buf, "%s", t_str);
   else if (env[1] == '2') len = (uint32_t)sprintf(buf, "%s", d_str);
   break;
-		
-		
+        
+    // --- NUEVO CASO 's': Estado de la configuración SNTP/Alarma (Apartado 5) ---
+    case 's':
+      switch (env[1]) {
+        case '1': // Servidores SNTP: ¿Cuál está marcado? (Etiquetas %s10 y %s11)
+          if ((env[2] - '0') == sntp_server_index) {
+            len = (uint32_t)sprintf(buf, "%s", "checked"); // Uso "%s" para quitar el warning
+          } else {
+            len = (uint32_t)sprintf(buf, "%s", "");
+          }
+          break;
+          
+        case '2': // Checkbox Alarma: ¿Está activa? (Etiqueta %s2)
+          if (alarma_habilitada_web) {
+            len = (uint32_t)sprintf(buf, "%s", "checked");
+          } else {
+            len = (uint32_t)sprintf(buf, "%s", "");
+          }
+          break;
+          
+        case '3': // Desplegable Periodo: ¿Cuál está seleccionado? (Etiquetas %s31, %s32, etc.)
+          if ((env[2] - '0') == (int)periodo_seleccionado) {
+            len = (uint32_t)sprintf(buf, "%s", "selected");
+          } else {
+            len = (uint32_t)sprintf(buf, "%s", "");
+          }
+          break;
+          
+        case '4': // Texto del servidor actual (Etiqueta %s4)
+          len = (uint32_t)sprintf(buf, "%s", sntp_servers[sntp_server_index]);
+          break;
+      }
+      break;
+
     case 'x':
       // AD Input from 'ad.cgx'
       adv = AD_in (0);

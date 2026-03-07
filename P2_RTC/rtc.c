@@ -21,6 +21,8 @@
 RTC_HandleTypeDef hrtc;
 uint8_t alarma_activada = 0;
 
+RTC_PeriodoAlarma_t periodo_actual = ALARMA_DESACTIVADA;
+
 /**
   * @brief Configuración de Hardware del RTC (Reloj y Energía)
   */
@@ -136,7 +138,7 @@ void RTC_ActualizarDesdeUnix(uint32_t segundos_unix) {
     sTime.Seconds = segundos_hoy % 60;
     HAL_RTC_SetTime(&hrtc, &sTime, RTC_FORMAT_BIN);
 
-    // 4. EXTRAER FECHA MATEMÁTICAMENTE (¡Adiós gmtime!)
+    // 4. EXTRAER FECHA MATEMÁTICAMENTE 
     uint32_t dias_totales = tiempo_local / 86400;
     uint32_t anio = 1970;
 
@@ -203,4 +205,47 @@ void RTC_Reset_A_2000(void) {
   sDate.Year = 0; // El año 2000 es el 00 para este reloj
   HAL_RTC_SetDate(&hrtc, &sDate, RTC_FORMAT_BIN);
 }
+
+/**
+  * @brief Configura la alarma según el periodo deseado
+  */
+void RTC_ConfigurarAlarma(RTC_PeriodoAlarma_t periodo) {
+    RTC_AlarmTypeDef sAlarm = {0};
+    periodo_actual = periodo;
+
+    if (periodo == ALARMA_DESACTIVADA) {
+        HAL_RTC_DeactivateAlarm(&hrtc, RTC_ALARM_A);
+        return;
+    }
+
+    // Configuración base
+    sAlarm.Alarm = RTC_ALARM_A;
+    
+    switch (periodo) {
+        case ALARMA_CADA_10_SEG:
+            // Para "cada 10 segundos" exactos en el seg 10, 20... es complejo con máscaras simples.
+            sAlarm.AlarmTime.Seconds = 10; 
+            sAlarm.AlarmMask = RTC_ALARMMASK_HOURS | RTC_ALARMMASK_MINUTES | RTC_ALARMMASK_DATEWEEKDAY;
+            break;
+
+        case ALARMA_CADA_1_MIN:
+            sAlarm.AlarmTime.Seconds = 0;
+            sAlarm.AlarmMask = RTC_ALARMMASK_HOURS | RTC_ALARMMASK_MINUTES | RTC_ALARMMASK_DATEWEEKDAY;
+            break;
+
+        case ALARMA_CADA_5_MIN:
+            // El RTC de STM32 no permite máscara de "cada 5 min" directamente. 
+            // Se suele configurar para que salte cada minuto y en la ISR (Callback) 
+            // se comprueba si (minutos % 5 == 0) para ejecutar la acción.
+            sAlarm.AlarmTime.Seconds = 0;
+            sAlarm.AlarmMask = RTC_ALARMMASK_HOURS | RTC_ALARMMASK_MINUTES | RTC_ALARMMASK_DATEWEEKDAY;
+            break;
+            
+        default:
+            return;
+    }
+
+    HAL_RTC_SetAlarm_IT(&hrtc, &sAlarm, RTC_FORMAT_BIN);
+}
+
 

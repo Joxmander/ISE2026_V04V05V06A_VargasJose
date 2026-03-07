@@ -25,7 +25,7 @@
 
 //   <e>VLAN
 //   <i>Enable or disable Virtual LAN
-#define ETH0_VLAN_ENABLE        0
+#define ETH0_VLAN_ENABLE        1
 
 //     <o>VLAN Identifier <1-4093>
 //     <i>A unique 12-bit numeric value
@@ -66,7 +66,7 @@
 //     <i>This option enables fragmentation of outgoing IP datagrams,
 //     <i>and reassembling the fragments of incoming IP datagrams.
 //     <i>Default: enabled
-#define ETH0_IP4_FRAG_ENABLE    1
+#define ETH0_IP4_FRAG_ENABLE    0
 
 //       <o>MTU size <576-1500>
 //       <i>Maximum Transmission Unit in bytes

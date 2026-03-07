@@ -1,11 +1,15 @@
-/*------------------------------------------------------------------------------
- * MDK Middleware - Component ::Network
- * Copyright (c) 2004-2019 Arm Limited (or its affiliates). All rights reserved.
- *------------------------------------------------------------------------------
- * Name:    HTTP_Server.c
- * Purpose: HTTP Server example
- *----------------------------------------------------------------------------*/
-
+/**
+  ******************************************************************************
+  * @file    HTTP_Server.c
+  * @author  Jose Vargas Gonzaga
+  * @brief   Implementación del servidor HTTP
+  *          Contiene la lógica principal para atender las peticiones de la
+  *          red y servir las páginas estáticas y dinámicas. Este módulo
+  *          coordina las llamadas a CGI, gestión de sockets y mantenimiento
+  *          de la conexión con el hardware (ADC, RTC, etc.).
+  ******************************************************************************
+  */
+	
 #include <stdio.h>
 #include "string.h"
 #include <stdlib.h>
@@ -23,7 +27,7 @@
 
 /* --- CONFIGURACIÓN DEL HILO PRINCIPAL (app_main) --- */
 // Main stack size must be multiple of 8 Bytes
-#define APP_MAIN_STK_SZ (1024U)
+#define APP_MAIN_STK_SZ (2048U)		// Memoria asignada al hilo de la red, antes 1024
 uint64_t app_main_stk[APP_MAIN_STK_SZ / 8];
 const osThreadAttr_t app_main_attr = {
   .stack_mem  = &app_main_stk[0],

@@ -185,7 +185,8 @@ void netCGI_ProcessData (uint8_t code, const char *data, uint32_t len) {
 /*----------------------------------------------------------------------------
   3. netCGI_Script: El "Generador" de contenido dinámico.
   Se ejecuta cuando el servidor lee una línea que empieza por 't' en un .cgi.
-  Sustituye los comandos especiales por datos reales del micro.
+  Sustituye los comandos especiales por datos reales del micro, los símbolos 
+  % por datos reales.
  *---------------------------------------------------------------------------*/
 uint32_t netCGI_Script (const char *env, char *buf, uint32_t buflen, uint32_t *pcgi) {
   int32_t socket;
@@ -344,18 +345,18 @@ uint32_t netCGI_Script (const char *env, char *buf, uint32_t buflen, uint32_t *p
       }
       len = (uint32_t)sprintf (buf, &env[2], lang, netHTTPs_GetLanguage());
       break;
-		// --- CASO 'f': Mostrar texto actual del LCD en la web ---
-    case 'f':
-      // LCD Module control from 'lcd.cgi'
-      switch (env[2]) {
-        case '1':
-          len = (uint32_t)sprintf (buf, &env[4], lcd_text[0]);
-          break;
-        case '2':
-          len = (uint32_t)sprintf (buf, &env[4], lcd_text[1]);
-          break;
-      }
-      break;
+//		// --- CASO 'f': Mostrar texto actual del LCD en la web ---
+//    case 'f':
+//      // LCD Module control from 'lcd.cgi'
+//      switch (env[2]) {
+//        case '1':
+//          len = (uint32_t)sprintf (buf, &env[4], lcd_text[0]);
+//          break;
+//        case '2':
+//          len = (uint32_t)sprintf (buf, &env[4], lcd_text[1]);
+//          break;
+//      }
+//      break;
 		// --- CASO 'g': Entrada del ADC (Potenciómetro) ---
     case 'g':
       // AD Input from 'ad.cgi'
@@ -373,12 +374,36 @@ uint32_t netCGI_Script (const char *env, char *buf, uint32_t buflen, uint32_t *p
           break;
       }
       break;
-    // --- CASO 't' (NUEVO P2): Mostrar Hora y Fecha del RTC ---
-    case 't':
-      RTC_ObtenerHoraFecha(t_str, d_str); // Llamamos a tu biblioteca rtc.c
-      if (env[1] == 'h') len = sprintf (buf, "%s", t_str); // Si pides 'th' mandamos hora
-      if (env[1] == 'f') len = sprintf (buf, "%s", d_str); // Si pides 'tf' mandamos fecha
-      break;
+//    // CASO 'h': Responde a la etiqueta %h en time.cgi
+//    case 'h':
+//      RTC_ObtenerHoraFecha(t_str, d_str); // Llama a tu librería rtc.c
+//      len = sprintf(buf, "%s", t_str); // Copia la hora al buffer que se envía a la web
+//      break;
+
+    // --- CASO 't' Mostrar Hora y Fecha del RTC ---
+//   case 't': 
+//    {
+//      RTC_ObtenerHoraFecha(t_str, d_str);
+//      
+//      // Si la etiqueta es %t1 -> Mandamos la Hora
+//      if (env[1] == '1') {
+//        len = (uint32_t)sprintf(buf, "%s", t_str);
+//      }
+//      // Si la etiqueta es %t2 -> Mandamos la Fecha
+//      else if (env[1] == '2') {
+//        len = (uint32_t)sprintf(buf, "%s", d_str);
+//      }
+//    }
+//    break;
+
+// En netCGI_Script, añade una comprobación de seguridad
+case 'h': 
+  RTC_ObtenerHoraFecha(t_str, d_str);
+  if (env[1] == '1') len = (uint32_t)sprintf(buf, "%s", t_str);
+  else if (env[1] == '2') len = (uint32_t)sprintf(buf, "%s", d_str);
+  break;
+		
+		
     case 'x':
       // AD Input from 'ad.cgx'
       adv = AD_in (0);

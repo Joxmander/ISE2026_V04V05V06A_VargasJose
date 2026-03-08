@@ -54,7 +54,7 @@
           <CreateLib>0</CreateLib>
           <CreateHexFile>0</CreateHexFile>
           <DebugInformation>1</DebugInformation>
-          <BrowseInformation>0</BrowseInformation>
+          <BrowseInformation>1</BrowseInformation>
           <ListingPath>.\Debug\</ListingPath>
           <HexFormatSelection>1</HexFormatSelection>
           <Merge32K>0</Merge32K>
@@ -337,7 +337,7 @@
             <v6Rtti>0</v6Rtti>
             <VariousControls>
               <MiscControls></MiscControls>
-              <Define>HSE_VALUE=25000000</Define>
+              <Define>HSE_VALUE=8000000</Define>
               <Undefine></Undefine>
               <IncludePath></IncludePath>
             </VariousControls>

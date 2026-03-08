@@ -42,36 +42,49 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "stm32f4xx_it.h"
-
 #include "rtc.h"
+#include "cmsis_os2.h" // Necesario para reconocer las funciones del RTOS
 
-#ifdef _RTE_
-#include "RTE_Components.h"             /* Component selection */
-#endif
-
-/** @addtogroup STM32F4xx_HAL_Examples
-  * @{
-  */
-
-/** @addtogroup Templates
-  * @{
-  */
-
-/* Private typedef -----------------------------------------------------------*/
-/* Private define ------------------------------------------------------------*/
-/* Private macro -------------------------------------------------------------*/
 /* Private variables ---------------------------------------------------------*/
 extern RTC_HandleTypeDef hrtc;
-/* Private function prototypes -----------------------------------------------*/
-/* Private functions ---------------------------------------------------------*/
+
+// Traigo de forma externa los timers que he creado en mi HTTP_Server.c
+// para poder detenerlos desde aquí cuando el parpadeo termine.
+extern osTimerId_t timer_led_rojo;
+extern osTimerId_t timer_led_verde;
+
+/* --- VARIABLES GLOBALES PARA LOS PULSOS --- */
+uint32_t pulsos_rojo = 0;
+uint32_t pulsos_verde = 0;
+
+/* ---  FUNCIONES DE RESETEO --- */
+// Estas funciones me permiten poner a cero la cuenta desde otros archivos
+void ResetPulsosRojo(void) { 
+    pulsos_rojo = 0; 
+}
+
+void ResetPulsosVerde(void) { 
+    pulsos_verde = 0; 
+}
 
 /******************************************************************************/
-/*            Cortex-M4 Processor Exceptions Handlers                         */
+/* Cortex-M4 Processor Exceptions Handlers                         */
 /******************************************************************************/
 
 /**
-  * @brief Callback que se ejecuta cuando salta la alarma
-  */
+ * @brief Manejador físico de la interrupción de la Alarma del RTC.
+ * Cuando el hardware detecta la coincidencia de tiempo, salta aquí.
+ * Yo llamo a la función de la HAL para que limpie los flags y ejecute mi callback.
+ */
+void RTC_Alarm_IRQHandler(void) {
+  HAL_RTC_AlarmIRQHandler(&hrtc);
+}
+
+/**
+ * @brief Callback de la HAL que se ejecuta cuando salta la alarma del hardware.
+ * Aquí aplico mis filtros para saber si realmente debo activar la alarma según
+ * lo que he configurado en la web (10 seg o 5 min).
+ */
 void HAL_RTC_AlarmAEventCallback(RTC_HandleTypeDef *hrtc) {
     RTC_TimeTypeDef sTime;
     RTC_DateTypeDef sDate;
@@ -80,28 +93,54 @@ void HAL_RTC_AlarmAEventCallback(RTC_HandleTypeDef *hrtc) {
     HAL_RTC_GetTime(hrtc, &sTime, RTC_FORMAT_BIN);
     HAL_RTC_GetDate(hrtc, &sDate, RTC_FORMAT_BIN);
 
-    // Si queremos 10 segundos, filtramos usando el módulo (%)
+    // Si el usuario me ha pedido 10 segundos, filtro matemáticamente
     if (periodo_actual == ALARMA_CADA_10_SEG) {
-        if (sTime.Seconds % 10 != 0) return; // Si no es segundo 0, 10, 20... ignoramos.
+        if (sTime.Seconds % 10 != 0) return; 
     }
-    // Si queremos 5 minutos
+    // Si el usuario me ha pedido 5 minutos
     else if (periodo_actual == ALARMA_CADA_5_MIN) {
-        if (sTime.Minutes % 5 != 0 || sTime.Seconds != 0) return; // Solo minuto múltiplo de 5 y seg 0.
+        if (sTime.Minutes % 5 != 0 || sTime.Seconds != 0) return; 
     }
 
-    // Si pasamos los filtros, encendemos la bandera para que el LED Verde parpadee
+    // Si supero los filtros, le digo a mi hilo principal que active el timer visual
     alarma_activada = 1; 
 }
 
 /**
-  * @brief Manejador físico de la interrupción de la Alarma del RTC.
-  * Resuelve la petición de hardware y llama al Callback automáticamente.
-  */
-void RTC_Alarm_IRQHandler(void) {
-  // Esta función de la HAL limpia los flags de la interrupción 
-  // para que no se cuelgue, y luego llama a tu HAL_RTC_AlarmAEventCallback.
-  HAL_RTC_AlarmIRQHandler(&hrtc);
+ * @brief Callback para el parpadeo del LED ROJO (Evento SNTP completado)
+ * El RTOS llamará a esta función automáticamente cada 100ms porque así lo he
+ * configurado al crear el timer.
+ */
+void TimerRojo_Callback (void *argument) {
+
+    HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_14);
+    pulsos_rojo++;
+    
+    if (pulsos_rojo >= 40) {
+        pulsos_rojo = 0; // Reseteo mi contador para la próxima vez
+        HAL_GPIO_WritePin(GPIOB, GPIO_PIN_14, GPIO_PIN_RESET); // Apago el LED por seguridad
+        osTimerStop(timer_led_rojo); // Le digo al Sistema Operativo que detenga este timer
+    }
 }
+
+/**
+ * @brief Callback para el parpadeo del LED VERDE (Evento de Alarma RTC)
+ * El RTOS llamará a esta función automáticamente cada 200ms.
+ */
+void TimerVerde_Callback (void *argument) {
+
+    HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_0);
+    pulsos_verde++;
+    
+    if (pulsos_verde >= 25) {
+        pulsos_verde = 0; // Lo preparo para la siguiente alarma
+        HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0, GPIO_PIN_RESET); 
+        osTimerStop(timer_led_verde); // Detengo la alarma visual
+    }
+}
+
+// ... (Resto de los handlers como NMI_Handler, HardFault_Handler, etc., quedan igual) ...
+
 
 /**
   * @brief   This function handles NMI exception.

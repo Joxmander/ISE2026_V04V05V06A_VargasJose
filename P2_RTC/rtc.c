@@ -209,6 +209,9 @@ void RTC_Reset_A_2000(void) {
 /**
   * @brief Configura la alarma según el periodo deseado
   */
+/**
+  * @brief Configura la alarma según el periodo deseado
+  */
 void RTC_ConfigurarAlarma(RTC_PeriodoAlarma_t periodo) {
     RTC_AlarmTypeDef sAlarm = {0};
     periodo_actual = periodo;
@@ -218,31 +221,17 @@ void RTC_ConfigurarAlarma(RTC_PeriodoAlarma_t periodo) {
         return;
     }
 
-    // Configuración base
     sAlarm.Alarm = RTC_ALARM_A;
-    
-    switch (periodo) {
-        case ALARMA_CADA_10_SEG:
-            // Para "cada 10 segundos" exactos en el seg 10, 20... es complejo con máscaras simples.
-            sAlarm.AlarmTime.Seconds = 10; 
-            sAlarm.AlarmMask = RTC_ALARMMASK_HOURS | RTC_ALARMMASK_MINUTES | RTC_ALARMMASK_DATEWEEKDAY;
-            break;
 
-        case ALARMA_CADA_1_MIN:
-            sAlarm.AlarmTime.Seconds = 0;
-            sAlarm.AlarmMask = RTC_ALARMMASK_HOURS | RTC_ALARMMASK_MINUTES | RTC_ALARMMASK_DATEWEEKDAY;
-            break;
-
-        case ALARMA_CADA_5_MIN:
-            // El RTC de STM32 no permite máscara de "cada 5 min" directamente. 
-            // Se suele configurar para que salte cada minuto y en la ISR (Callback) 
-            // se comprueba si (minutos % 5 == 0) para ejecutar la acción.
-            sAlarm.AlarmTime.Seconds = 0;
-            sAlarm.AlarmMask = RTC_ALARMMASK_HOURS | RTC_ALARMMASK_MINUTES | RTC_ALARMMASK_DATEWEEKDAY;
-            break;
-            
-        default:
-            return;
+    // TRUCO: Para 10 seg o 5 min, le decimos al hardware que interrumpa CADA SEGUNDO.
+    // Luego, en la interrupción de abajo (Callback), filtramos el tiempo.
+    if (periodo == ALARMA_CADA_10_SEG || periodo == ALARMA_CADA_5_MIN) {
+        sAlarm.AlarmMask = RTC_ALARMMASK_HOURS | RTC_ALARMMASK_MINUTES | RTC_ALARMMASK_SECONDS | RTC_ALARMMASK_DATEWEEKDAY;
+    } 
+    // Para 1 minuto, el hardware sí puede hacerlo solo (saltando solo en el seg 00)
+    else if (periodo == ALARMA_CADA_1_MIN) {
+        sAlarm.AlarmTime.Seconds = 0;
+        sAlarm.AlarmMask = RTC_ALARMMASK_HOURS | RTC_ALARMMASK_MINUTES | RTC_ALARMMASK_DATEWEEKDAY;
     }
 
     HAL_RTC_SetAlarm_IT(&hrtc, &sAlarm, RTC_FORMAT_BIN);

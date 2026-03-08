@@ -23,8 +23,8 @@
 //   <i>NTP Server IPv4 Address in text representation
 //   <i>Default: "217.79.179.106"
 
-//#define SNTP_CLIENT_NTP_SERVER  "217.79.179.106"
-#define SNTP_CLIENT_NTP_SERVER  "216.239.35.0"   //Servidor Google
+#define SNTP_CLIENT_NTP_SERVER  "217.79.179.106"
+//#define SNTP_CLIENT_NTP_SERVER  "216.239.35.0"   //Servidor Google
 // </h>
 
 //------------- <<< end of configuration section >>> ---------------------------

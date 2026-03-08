@@ -8,8 +8,13 @@ t </head>
 i pg_header.inc
 t <h2 align=center><br>Estado del Reloj Interno (RTC) y SNTP</h2>
 t <p><font size="2">Esta pagina muestra la <b>Hora</b> y la <b>Fecha</b> actuales
-t  almacenadas en el microcontrolador STM32, y permite configurar las opciones del <b>Apartado 5</b>.<br><br>
-t  <b>Nota:</b> Refresca la pagina (F5) para actualizar la hora en tiempo real.</font></p>
+t  almacenadas en el microcontrolador STM32.<br><br>
+t  <b>Nota:</b> Usa el boton "Refrescar Pagina" para actualizar la hora sin avisos molestos.</font></p>
+t 
+t <div align="center">
+t   <input type="button" value="Refrescar Pagina" onclick="window.location.href='time.cgi';">
+t </div>
+t <br>
 t 
 t <table border=0 width=99%><font size="3">
 t <tr bgcolor=#aaccff>
@@ -28,32 +33,32 @@ t <td><b style="color:blue;">
 c s4
 t </b></td></tr>
 t </font></table>
-t <br>
+t <br> 
 t 
-t t <form action="time.cgi" method="POST" name="rtc_form">
+t <form action="time.cgi" method="POST" name="rtc_form">
 t <table border=0 width=99%><font size="3">
 t <tr bgcolor=#aaccff>
 t  <th width=40%>Configuracion (Apartado 5)</th>
-t  <th width=60%>Opciones</th></tr>
+t  <th width=60%>Opciones</th></tr> 
 t 
-t t <tr><td><img src=pabb.gif>Cambiar Servidor SNTP:</td>
+t <tr><td><img src=pabb.gif>Cambiar Servidor SNTP:</td>
 t <td>
 t   <input type="radio" name="sntp" value="0"
 c s10
-t   > 0.pool.ntp.org<br>
+t   > Google NTP (216.239.35.0)<br>
 t   <input type="radio" name="sntp" value="1"
 c s11
-t   > 1.pool.ntp.org
+t   > Cloudflare NTP (162.159.200.1)
 t </td></tr>
 t 
-t t <tr><td><img src=pabb.gif>Estado de la Alarma:</td>
+t <tr><td><img src=pabb.gif>Estado de la Alarma:</td>
 t <td>
 t   <input type="checkbox" name="alm_en" value="on"
 c s2
 t   > Habilitar alarma del RTC (LED Verde)
 t </td></tr>
 t 
-t t <tr><td><img src=pabb.gif>Periodo de la Alarma:</td>
+t <tr><td><img src=pabb.gif>Periodo de la Alarma:</td>
 t <td>
 t   <select name="periodo">
 t     <option value="1"
@@ -68,7 +73,7 @@ t     >Cada 5 minutos</option>
 t   </select>
 t </td></tr>
 t 
-t t <tr><td colspan="2" align="center">
+t <tr><td colspan="2" align="center">
 t   <input type="button" value="Aplicar Cambios" onclick="submit_form()">
 t </td></tr>
 t 

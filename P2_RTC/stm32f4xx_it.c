@@ -73,13 +73,24 @@ extern RTC_HandleTypeDef hrtc;
   * @brief Callback que se ejecuta cuando salta la alarma
   */
 void HAL_RTC_AlarmAEventCallback(RTC_HandleTypeDef *hrtc) {
-    if (periodo_actual == ALARMA_CADA_5_MIN) {
-        RTC_TimeTypeDef sTime;
-        HAL_RTC_GetTime(hrtc, &sTime, RTC_FORMAT_BIN);
-        if (sTime.Minutes % 5 != 0) return; // Solo actuo si es múltiplo de 5
+    RTC_TimeTypeDef sTime;
+    RTC_DateTypeDef sDate;
+
+    // Obligatorio leer hora y luego fecha para que la librería HAL funcione bien
+    HAL_RTC_GetTime(hrtc, &sTime, RTC_FORMAT_BIN);
+    HAL_RTC_GetDate(hrtc, &sDate, RTC_FORMAT_BIN);
+
+    // Si queremos 10 segundos, filtramos usando el módulo (%)
+    if (periodo_actual == ALARMA_CADA_10_SEG) {
+        if (sTime.Seconds % 10 != 0) return; // Si no es segundo 0, 10, 20... ignoramos.
     }
-    
-    alarma_activada = 1; // Bandera para el bucle principal
+    // Si queremos 5 minutos
+    else if (periodo_actual == ALARMA_CADA_5_MIN) {
+        if (sTime.Minutes % 5 != 0 || sTime.Seconds != 0) return; // Solo minuto múltiplo de 5 y seg 0.
+    }
+
+    // Si pasamos los filtros, encendemos la bandera para que el LED Verde parpadee
+    alarma_activada = 1; 
 }
 
 /**

@@ -43,12 +43,13 @@
 #include "main.h"
 #include "stm32f4xx_it.h"
 #include "rtc.h"
-
 #include "power.h"
 
 /* Private variables ---------------------------------------------------------*/
 extern RTC_HandleTypeDef hrtc;
 extern uint32_t contador_sntp_segundos;
+extern volatile uint8_t despertar_por_boton;
+extern volatile uint8_t is_sleeping;
 
 // Traigo de forma externa los timers que he creado en mi HTTP_Server.c
 // para poder detenerlos desde aquí cuando el parpadeo termine.
@@ -75,22 +76,20 @@ void ResetPulsosVerde(void) {
 
 
 void EXTI15_10_IRQHandler(void) {
-    // Verificamos si la interrupción es del pin 13 (Botón azul)
     if (__HAL_GPIO_EXTI_GET_IT(GPIO_PIN_13) != RESET) {
-        
-        // Limpiamos la bandera física de la interrupción
         __HAL_GPIO_EXTI_CLEAR_IT(GPIO_PIN_13); 
 
-        // Evaluamos qué hacer según el estado del sistema
-        if (is_sleeping == 0) {
-            // El sistema está DESPIERTO: Hacemos lo de la Práctica 2
+        if (is_sleeping == 1) {
+            // Si estábamos durmiendo, marcamos que el botón nos despertó
+            despertar_por_boton = 1;
+        } else {
+            // Lógica normal de la Práctica 2 cuando el sistema está despierto
             RTC_Reset_A_2000();
             contador_sntp_segundos = 0;
         }
-        // Si is_sleeping == 1, no hacemos nada más. 
-        // El simple hecho de entrar a esta interrupción ya ha despertado al hardware.
     }
 }
+
 
 
 /**
@@ -114,6 +113,11 @@ void HAL_RTC_AlarmAEventCallback(RTC_HandleTypeDef *hrtc) {
     // Obligatorio leer hora y luego fecha para que la librería HAL funcione bien
     HAL_RTC_GetTime(hrtc, &sTime, RTC_FORMAT_BIN);
     HAL_RTC_GetDate(hrtc, &sDate, RTC_FORMAT_BIN);
+
+    // FILTRO CRÍTICO: Si el sistema está en modo Sleep, ignoramos la alarma
+    if (is_sleeping == 1) {
+        return; 
+    }
 
     // Si el usuario me ha pedido 10 segundos, filtro matemáticamente
     if (periodo_actual == ALARMA_CADA_10_SEG) {

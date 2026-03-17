@@ -233,6 +233,38 @@ void netCGI_ProcessData (uint8_t code, const char *data, uint32_t len) {
         periodo_seleccionado = (RTC_PeriodoAlarma_t)atoi(&var[8]);
         RTC_ConfigurarAlarma(periodo_seleccionado); // LLamo directamente a mi librería rtc.c
       }
+      
+      /* --- Ajuste manual de la hora (desde la web) --- */
+      /* --- NUEVA GESTIÓN: AJUSTE MANUAL DE HORA Y FECHA --- */
+      
+      // 4. Capturo la nueva Hora Manual (Si el usuario escribió algo)
+      // El navegador envía el formato "HH:MM:SS" (o similar si omiten segundos)
+      else if (strncmp(var, "m_time=", 7) == 0) {
+          // Si el valor no está vacío (var[7] tiene algo)
+          if (var[7] != '\0') {
+              int horas = 0, minutos = 0, segundos = 0;
+              // Uso sscanf para "despiezar" el texto y extraer los números separados por ':'
+              sscanf(&var[7], "%d:%d:%d", &horas, &minutos, &segundos);
+              
+              // Llamo a mi nueva función del RTC para guardar la hora
+              RTC_SetHoraManual((uint8_t)horas, (uint8_t)minutos, (uint8_t)segundos);
+          }
+      }
+      
+      // 5. Capturo la nueva Fecha Manual
+      // El navegador envía el formato de fecha ISO: "YYYY-MM-DD"
+      else if (strncmp(var, "m_date=", 7) == 0) {
+          if (var[7] != '\0') {
+              int anio = 0, mes = 0, dia = 0;
+              // Uso sscanf para despiezar el texto separándolo por los guiones '-'
+              sscanf(&var[7], "%d-%d-%d", &anio, &mes, &dia);
+              
+              // Llamo a mi nueva función del RTC para guardar la fecha
+              RTC_SetFechaManual((uint8_t)dia, (uint8_t)mes, (uint16_t)anio);
+          }
+      }
+
+      
     }
   } while (data); // Repito hasta que no queden más variables en la cadena.
 

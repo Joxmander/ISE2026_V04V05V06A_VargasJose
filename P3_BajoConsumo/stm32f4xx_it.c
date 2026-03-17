@@ -43,10 +43,12 @@
 #include "main.h"
 #include "stm32f4xx_it.h"
 #include "rtc.h"
-#include "cmsis_os2.h" // Necesario para reconocer las funciones del RTOS
+
+#include "power.h"
 
 /* Private variables ---------------------------------------------------------*/
 extern RTC_HandleTypeDef hrtc;
+extern uint32_t contador_sntp_segundos;
 
 // Traigo de forma externa los timers que he creado en mi HTTP_Server.c
 // para poder detenerlos desde aquí cuando el parpadeo termine.
@@ -70,6 +72,26 @@ void ResetPulsosVerde(void) {
 /******************************************************************************/
 /* Cortex-M4 Processor Exceptions Handlers                         */
 /******************************************************************************/
+
+
+void EXTI15_10_IRQHandler(void) {
+    // Verificamos si la interrupción es del pin 13 (Botón azul)
+    if (__HAL_GPIO_EXTI_GET_IT(GPIO_PIN_13) != RESET) {
+        
+        // Limpiamos la bandera física de la interrupción
+        __HAL_GPIO_EXTI_CLEAR_IT(GPIO_PIN_13); 
+
+        // Evaluamos qué hacer según el estado del sistema
+        if (is_sleeping == 0) {
+            // El sistema está DESPIERTO: Hacemos lo de la Práctica 2
+            RTC_Reset_A_2000();
+            contador_sntp_segundos = 0;
+        }
+        // Si is_sleeping == 1, no hacemos nada más. 
+        // El simple hecho de entrar a esta interrupción ya ha despertado al hardware.
+    }
+}
+
 
 /**
  * @brief Manejador físico de la interrupción de la Alarma del RTC.

@@ -23,6 +23,7 @@
 #include "lcd.h"
 #include "adc.h"
 #include "rtc.h"
+#include "power.h"
 
 /* --- CONFIGURACIÓN DEL HILO PRINCIPAL (app_main) --- */
 // Reservo una pila estática para el hilo del servidor. 
@@ -39,6 +40,7 @@ const osThreadAttr_t app_main_attr = {
 bool LEDrun;                                // Controla si permito el parpadeo de LEDs desde el navegador.
 char lcd_text[2][20+1];                     // Array 2D para guardar las dos líneas de texto que me mandan a la pantalla LCD.
 uint8_t iniciar_parpadeo_sntp = 0;          // Bandera que levanto cuando recibo la hora de internet para disparar el LED rojo.
+uint32_t contador_sntp_segundos = 0; // Lleva la cuenta de los segundos desde el arranque para saber cuándo pedir la hora a internet.
 
 /* --- VARIABLES PARA EL APARTADO 5 (Configuración Web) --- */
 uint8_t sntp_server_index = 0;              // Índice para seleccionar cuál de los dos servidores NTP estoy utilizando (0 o 1).
@@ -71,6 +73,7 @@ void Sincronizacion_SNTP_Completada(uint32_t segundos_unix, uint32_t fraccion);
 __NO_RETURN void app_main (void *arg);
 
 
+
 /**
  * @brief Lee el valor del potenciómetro a través del ADC (Conversor Analógico a Digital).
  * @param ch : Canal del ADC. Lo mantengo por compatibilidad con firmas estándar, aunque internamente fuerzo el canal 10.
@@ -99,6 +102,15 @@ uint8_t get_button (void) { return 0; }
 void netDHCP_Notify (uint32_t if_num, uint8_t option, const uint8_t *val, uint32_t len) { }
 
 
+
+// --- HILO PARA EL PARPADEO DEL LED VERDE EN MODO SLEEP ---
+void LedVerde_Sleep_Thread (void *argument) {
+  while (1) {
+    HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_0); // Parpadea el led verde
+    osDelay(100); // Cada 100ms
+  }
+}
+
 /**
  * @brief Hilo principal de gestión del reloj y tareas periódicas.
  * @param argument : Puntero genérico del RTOS (no lo uso).
@@ -109,20 +121,25 @@ void Time_Thread (void *argument) {
   MSGQUEUE_OBJ_LCD_t msg_lcd;      // Estructura donde prepararé los mensajes para la pantalla.
   char t_buffer[20], d_buffer[20]; // Buffers locales donde guardaré la hora y la fecha extraídas del hardware.
   
-  uint32_t contador_sntp_segundos = 0; // Lleva la cuenta de los segundos desde el arranque para saber cuándo pedir la hora a internet.
   uint8_t  divisor_100ms = 0;          // Lo usaré para contar de 10 en 10 y saber cuándo ha pasado 1 segundo real.
 
+	uint32_t contador_sleep = 0;
+	
   // 1. Inicializo mi hardware del reloj
   RTC_Init();
   RTC_ConfigurarAlarma(periodo_seleccionado); // Inicialmente ALARMA_CADA_1_MIN
 
-  // 2. Configuro el pin físico del botón azul de la placa (PC13)
+  // 2. Configuro el pin físico del botón azul de la placa (PC13) como interrupcion
   __HAL_RCC_GPIOC_CLK_ENABLE();
   GPIO_InitTypeDef GPIO_InitStruct = {0};
   GPIO_InitStruct.Pin = GPIO_PIN_13;
-  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
+	
+	// Habilito la interrupción en el NVIC
+  HAL_NVIC_SetPriority(EXTI15_10_IRQn, 5, 0);
+  HAL_NVIC_EnableIRQ(EXTI15_10_IRQn);
 
   // 3. Configuro los pines físicos de mis LEDs (Verde=PB0, Rojo=PB14)
   __HAL_RCC_GPIOB_CLK_ENABLE();
@@ -135,12 +152,6 @@ void Time_Thread (void *argument) {
   while (1) {
     // Duermo mi hilo exactamente 100ms. Así no bloqueo la CPU y permito que la red y la web funcionen fluidas.
     osDelay(100); 
-
-    // --- LECTURA DEL BOTÓN AZUL ---
-    if (HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_13) == GPIO_PIN_SET) {
-        RTC_Reset_A_2000();         // Fuerzo la hora al año 2000 para forzar y probar la desincronización
-        contador_sntp_segundos = 0; // Reseteo mi contador para que vuelva a pedir la hora a los 5 segundos.
-    }
 
     // --- GESTIÓN DE EVENTOS DE HARDWARE / RED ---
     
@@ -172,6 +183,13 @@ void Time_Thread (void *argument) {
     // Cada 10 iteraciones de 100 ms (es decir, 1 segundo exacto) se ejecuta este bloque:
     if (divisor_100ms >= 10) {
         divisor_100ms = 0; // Reinicio mi divisor
+			
+        // Control del modo Sleep
+        contador_sleep++;
+        if (contador_sleep >= 15) {
+            Sistema_EntrarEnSleep();
+            contador_sleep = 0; // Reiniciamos la cuenta tras despertar
+        }
         
         // Actualizo mi pantalla mandando la hora a la cola de mensajes
         RTC_ObtenerHoraFecha(t_buffer, d_buffer);
@@ -241,8 +259,9 @@ __NO_RETURN void app_main (void *arg) {
   timer_led_rojo = osTimerNew(TimerRojo_Callback, osTimerPeriodic, NULL, NULL);
   timer_led_verde = osTimerNew(TimerVerde_Callback, osTimerPeriodic, NULL, NULL);
 
-  // 4. Creo y arranco mi hilo del tiempo
+  // 4. Creo y arranco mis hilos
   osThreadNew (Time_Thread, NULL, NULL); 
+  osThreadNew (LedVerde_Sleep_Thread, NULL, NULL); // Lanzamos el hilo del LED
   
   // 5. Destruyo este hilo inicial (app_main) porque ya no lo necesito, liberando recursos.
   osThreadExit();

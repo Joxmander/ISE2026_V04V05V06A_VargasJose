@@ -273,3 +273,71 @@ void RTC_ActualizarDesdeUnix(uint32_t segundos_unix) {
     
     HAL_RTC_SetDate(&hrtc, &sDate, RTC_FORMAT_BIN);
 }
+
+/**
+ * @brief Establece la hora del RTC a partir de componentes (hora, minuto, segundo).
+ *        Realiza la lectura previa necesaria y escribe la nueva hora en formato BIN.
+ */
+void RTC_SetTimeComponents(uint8_t hours, uint8_t minutes, uint8_t seconds) {
+    RTC_TimeTypeDef sTime = {0};
+
+    /* Validación básica por seguridad */
+    if (hours > 23) hours = 23;
+    if (minutes > 59) minutes = 59;
+    if (seconds > 59) seconds = 59;
+
+    /* Preparo la estructura y escribo la hora en el hardware */
+    sTime.Hours = hours;
+    sTime.Minutes = minutes;
+    sTime.Seconds = seconds;
+
+    /* Uso formato BIN para facilidad */
+    HAL_RTC_SetTime(&hrtc, &sTime, RTC_FORMAT_BIN);
+}
+
+
+/**
+ * @brief Configura la hora del RTC de forma manual.
+ * @param horas, minutos, segundos: Valores a configurar.
+ */
+void RTC_SetHoraManual(uint8_t horas, uint8_t minutos, uint8_t segundos) {
+    RTC_TimeTypeDef sTime = {0};
+    
+    // Cargo los valores en la estructura
+    sTime.Hours = horas;
+    sTime.Minutes = minutos;
+    sTime.Seconds = segundos;
+    
+    // Guardo en el hardware en formato binario
+    HAL_RTC_SetTime(&hrtc, &sTime, RTC_FORMAT_BIN);
+}
+
+/**
+ * @brief Configura la fecha del RTC de forma manual.
+ * @param dia, mes: Día y mes a configurar.
+ * @param anio: Año completo (ej. 2026).
+ */
+void RTC_SetFechaManual(uint8_t dia, uint8_t mes, uint16_t anio) {
+    RTC_DateTypeDef sDate = {0};
+    
+    sDate.Date = dia;
+    sDate.Month = mes;
+    
+    // Como el navegador me manda el año completo (ej. 2026), 
+    // le resto 2000 porque a mi hardware solo le caben 2 dígitos (26).
+    if (anio >= 2000) {
+        sDate.Year = anio - 2000;
+    } else {
+        sDate.Year = 0;
+    }
+    
+    // Para no complicar la matemática del día de la semana, pongo un día por defecto (Lunes).
+    // El microcontrolador lo requiere, pero para pintar en pantalla no lo solemos usar.
+    sDate.WeekDay = RTC_WEEKDAY_MONDAY; 
+    
+    // Guardo en el hardware (Siempre después de haber guardado la hora)
+    HAL_RTC_SetDate(&hrtc, &sDate, RTC_FORMAT_BIN);
+}
+
+
+

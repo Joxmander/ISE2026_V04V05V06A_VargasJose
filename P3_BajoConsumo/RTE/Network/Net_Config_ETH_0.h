@@ -21,7 +21,7 @@
 //   <i>Value FF-FF-FF-FF-FF-FF is not allowed,
 //   <i>LSB of first byte must be 0 (an ethernet Multicast bit).
 //   <i>Default: "1E-30-6C-A2-45-5E"
-#define ETH0_MAC_ADDR           "1E-30-6C-A2-45-56"
+#define ETH0_MAC_ADDR           "1E-30-6C-A2-45-E6"
 
 //   <e>VLAN
 //   <i>Enable or disable Virtual LAN

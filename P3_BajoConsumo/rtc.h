@@ -45,4 +45,10 @@ void RTC_Reset_A_2000(void);
 void RTC_ConfigurarAlarma(RTC_PeriodoAlarma_t periodo);
 void RTC_DesactivarAlarma(void);
 
+void RTC_SetTimeComponents(uint8_t hours, uint8_t minutes, uint8_t seconds);
+
+
+void RTC_SetHoraManual(uint8_t horas, uint8_t minutos, uint8_t segundos);
+void RTC_SetFechaManual(uint8_t dia, uint8_t mes, uint16_t anio);
+
 #endif

@@ -186,9 +186,8 @@ void Time_Thread (void *argument) {
 			
         // Control del modo Sleep
         contador_sleep++;
-        if (contador_sleep >= 15) {
+        if (contador_sleep == 15) {
             Sistema_EntrarEnSleep();
-            contador_sleep = 0; // Reiniciamos la cuenta tras despertar
         }
         
         // Actualizo mi pantalla mandando la hora a la cola de mensajes

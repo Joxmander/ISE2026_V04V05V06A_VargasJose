@@ -1,9 +1,0 @@
-t <xml>
-t <rtc_time>
-c h1
-t </rtc_time>
-t <rtc_date>
-c h2
-t </rtc_date>
-t </xml>
-.

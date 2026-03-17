@@ -21,7 +21,7 @@
 //   <i>Value FF-FF-FF-FF-FF-FF is not allowed,
 //   <i>LSB of first byte must be 0 (an ethernet Multicast bit).
 //   <i>Default: "1E-30-6C-A2-45-5E"
-#define ETH0_MAC_ADDR           "1E-30-6C-A2-45-E7"
+#define ETH0_MAC_ADDR           "1E-30-6C-A2-45-56"
 
 //   <e>VLAN
 //   <i>Enable or disable Virtual LAN
@@ -40,17 +40,17 @@
 //     <s.15>IP Address
 //     <i>Static IPv4 Address in text representation
 //     <i>Default: "192.168.0.100"
-#define ETH0_IP4_ADDR           "192.168.1.231"
+#define ETH0_IP4_ADDR           "10.48.11.116"
 
 //     <s.15>Subnet mask
 //     <i>Local Subnet mask in text representation
 //     <i>Default: "255.255.255.0"
-#define ETH0_IP4_MASK           "255.255.255.0"
+#define ETH0_IP4_MASK           "255.255.0.0"
 
 //     <s.15>Default Gateway
 //     <i>IP Address of Default Gateway in text representation
 //     <i>Default: "192.168.0.254"
-#define ETH0_IP4_GATEWAY        "192.168.1.1"
+#define ETH0_IP4_GATEWAY        "10.48.0.1"
 
 //     <s.15>Primary DNS Server
 //     <i>IP Address of Primary DNS Server in text representation

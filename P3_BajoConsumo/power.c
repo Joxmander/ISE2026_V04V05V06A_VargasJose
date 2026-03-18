@@ -9,6 +9,14 @@
 #include "power.h"
 #include "stm32f4xx_hal.h"
 
+// Direcciones por defecto del PHY de la placa Nucleo (LAN8742A)
+// PHY_POWERDOWN 0x0800
+// PHY_BCR       0x00
+
+// Declaración de las funciones auxiliares para Ethernet
+void ETH_PhyEnterPowerDownMode(void);
+void ETH_PhyExitFromPowerDownMode(void);
+
 // Necesitamos acceder a la configuración de reloj para restaurarla
 extern void SystemClock_Config(void); 
 
@@ -22,33 +30,77 @@ volatile uint8_t is_sleeping;
  * Sigo un orden estricto: encender aviso visual, parar el corazón del RTOS (Tick)
  * y entrar en un bucle WFI (Wait For Interrupt).
  */
+
 void Sistema_EntrarEnSleep(void) {
     is_sleeping = 1;
     despertar_por_boton = 0;
 
-    // 1. Requisito: Encender LED rojo (PB14) para avisar que me voy a dormir.
+    // 1. Requisito: Encender LED rojo (PB14)
     HAL_GPIO_WritePin(GPIOB, GPIO_PIN_14, GPIO_PIN_SET);
 
-    // 2. Suspendemos el Tick del sistema. 
-    // Si no hago esto, el RTOS generaría una interrupción cada 1ms y me despertaría.
+    // 2. Apagar el PHY de Ethernet para reducir drásticamente el consumo
+    // (y asegurar que el servidor web no responde a los pings/peticiones)
+    ETH_PhyEnterPowerDownMode();
+
+    // 3. Suspendemos el Tick del sistema. 
     HAL_SuspendTick();
 
-    /* BUCLE CRÍTICO: 
-       Si el micro se despierta por la actividad de red (Ethernet) o el reloj (RTC),
-       pero NO por el botón, el bucle lo vuelve a dormir inmediatamente. */
+    /* BUCLE CRÍTICO */
     while (despertar_por_boton == 0) {
         HAL_PWR_EnterSLEEPMode(PWR_MAINREGULATOR_ON, PWR_SLEEPENTRY_WFI);
     }
 
-    // 3. Al salir (despertado por el botón azul), reanudo el Tick para que el RTOS vuelva a la vida.
+    // 4. Al salir (despertado por el botón), reanudo el Tick
     HAL_ResumeTick();
 
-    // 4. Requisito: Apagar LED rojo nada más salir del estado de letargo.
+    // 5. Despertar el hardware de Ethernet para recuperar la conectividad
+    ETH_PhyExitFromPowerDownMode();
+
+    // 6. Requisito: Apagar LED rojo nada más salir del estado de letargo.
     HAL_GPIO_WritePin(GPIOB, GPIO_PIN_14, GPIO_PIN_RESET);
     
     is_sleeping = 0;
 }
 
+/* -------------------------------------------------------------------------- */
+/* FUNCIONES DE GESTIÓN ENERGÉTICA DEL ETHERNET                               */
+/* -------------------------------------------------------------------------- */
+
+void ETH_PhyEnterPowerDownMode(void) {
+    ETH_HandleTypeDef heth;
+    uint32_t phyregval = 0; 
+    
+    heth.Instance = ETH;
+    heth.Init.PhyAddress = 0x00; // Dirección por defecto
+    heth.Instance->MACMIIAR = (uint32_t)ETH_MACMIIAR_CR_Div102;
+
+    // Leemos el registro de control del PHY
+    HAL_ETH_ReadPHYRegister(&heth, PHY_BCR, &phyregval);
+    
+    // Activamos el bit de Power Down
+    phyregval |= PHY_POWERDOWN;
+    
+    // Escribimos el nuevo valor para dormir el chip
+    HAL_ETH_WritePHYRegister(&heth, PHY_BCR, phyregval);
+}
+
+void ETH_PhyExitFromPowerDownMode(void) {
+    ETH_HandleTypeDef heth;
+    uint32_t phyregval = 0;
+    
+    heth.Instance = ETH;
+    heth.Init.PhyAddress = 0x00; 
+    heth.Instance->MACMIIAR = (uint32_t)ETH_MACMIIAR_CR_Div102; 
+    
+    // Leemos el registro de control
+    HAL_ETH_ReadPHYRegister(&heth, PHY_BCR, &phyregval);
+    
+    // Si está dormido, lo despertamos quitando el bit
+    if ((phyregval & PHY_POWERDOWN) != RESET) {
+        phyregval &= ~PHY_POWERDOWN;
+        HAL_ETH_WritePHYRegister(&heth, PHY_BCR, phyregval);
+    }
+}
 
 /**
  * @brief Pone el procesador en modo STOP para maximizar el ahorro energético.

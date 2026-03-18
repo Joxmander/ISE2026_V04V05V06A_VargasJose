@@ -186,13 +186,11 @@ void Time_Thread (void *argument) {
                         Sistema_EntrarEnSleep();
                         break;
                     case 1:
-                        Sistema_EntrarEnStop();
+                        Sistema_EntrarEnSleep();
                         break;
                     default:
-                        Sistema_EntrarEnStop();
-                }
-            // Al despertar, reseteo el contador para que no vuelva a dormir en 1s.
-            contador_sleep = 0; 
+                        Sistema_EntrarEnSleep();
+                } 
         }
         
         // Actualizo la pantalla LCD con la hora y fecha actuales.

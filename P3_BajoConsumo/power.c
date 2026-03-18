@@ -113,30 +113,78 @@ void Sistema_EntrarEnStop(void) {
     is_sleeping = 1;
     despertar_por_boton = 0;
 
-    // Indicador visual: LED Rojo encendido
+    // 1. Indicador visual: LED Rojo encendido
     HAL_GPIO_WritePin(GPIOB, GPIO_PIN_14, GPIO_PIN_SET);
 
-    // 1. Suspender el tick de HAL
+    // 2. Apagamos el hardware de red (Vital para el consumo en batería)
+    ETH_PhyEnterPowerDownMode();
+
+    // 3. Suspendemos el tick de HAL para que el RTOS no nos despierte por error
     HAL_SuspendTick();
 
-    // 2. Entrar en modo STOP
-    // Usamos el regulador de bajo consumo para ahorrar aún más
-	  // Lo despertamos con la interrupcion del PC13, pero podemos añadir la que queramos
+    // 4. Entrar en modo STOP.
+    // Usamos PWR_LOWPOWERREGULATOR_ON para ahorrar la máxima energía posible
     while (despertar_por_boton == 0) {
-        HAL_PWR_EnterSLEEPMode(PWR_MAINREGULATOR_ON, PWR_SLEEPENTRY_WFI);
+        HAL_PWR_EnterSTOPMode(PWR_LOWPOWERREGULATOR_ON, PWR_STOPENTRY_WFI);
     }
 
     /* --- EL MICRO SE DETIENE AQUÍ HASTA QUE PULSE EL BOTÓN --- */
 
-    // 3. ¡IMPORTANTE! Al despertar de STOP, el sistema usa HSI (16MHz).
-    // Debemos reactivar el HSE y el PLL para volver a 180MHz.
-    SystemClock_Config();
-
-    // 4. Reanudar el tick de HAL
+    // 5. ¡CRÍTICO! Reanudar el tick ANTES de configurar el reloj.
+    // Si no hacemos esto, SystemClock_Config() se quedará en un bucle infinito.
     HAL_ResumeTick();
 
-    // Apagar LED rojo al salir
+    // 6. Al despertar, el sistema usa el reloj interno básico HSI (16MHz).
+    // Reactivamos el HSE y el PLL para volver a los 180MHz.
+    SystemClock_Config();
+
+    // 7. Despertamos el PHY de Ethernet para recuperar la red
+    ETH_PhyExitFromPowerDownMode();
+
+    // 8. Apagar LED rojo al salir
     HAL_GPIO_WritePin(GPIOB, GPIO_PIN_14, GPIO_PIN_RESET);
     
     is_sleeping = 0;
 }
+
+
+/**
+ * @brief Pone el procesador en modo STANDBY (Apagado profundo de emergencia).
+ * Ideal para el "Modo Batería Crítica" del Nodo B del SECRM.
+ * ADVERTENCIA: Se pierde el contenido de la RAM. Al despertar (vía PA0 o Reset),
+ * el sistema se reiniciará desde cero pasando por el main().
+ */
+
+/**
+ * @brief Pone el procesador en modo STANDBY (Apagado profundo de emergencia).
+ * Ideal para el "Modo Batería Crítica" del Nodo B del SECRM.
+ * Al salir de este modo, el sistema se reiniciará completamente.
+ */
+void Sistema_EntrarEnStandby(void) {
+    
+    is_sleeping = 1; // Mantenemos coherencia con el resto del código
+
+    // 1. Aviso visual: Encendemos el LED rojo 2 segundos antes de apagarnos.
+    HAL_GPIO_WritePin(GPIOB, GPIO_PIN_14, GPIO_PIN_SET);
+    HAL_Delay(2000); 
+    HAL_GPIO_WritePin(GPIOB, GPIO_PIN_14, GPIO_PIN_RESET);
+
+    // 2. Apagamos dispositivos EXTERNOS (Cumpliendo la diapositiva de reducción de consumo)
+    ETH_PhyEnterPowerDownMode();
+
+    // 3. Habilitar el reloj del controlador de energía (PWR)
+    __HAL_RCC_PWR_CLK_ENABLE();
+
+    // 4. Limpiamos cualquier bandera de WakeUp antigua que haya quedado colgada
+    __HAL_PWR_CLEAR_FLAG(PWR_FLAG_WU);
+
+    // 5. Nos aseguramos de deshabilitar el pin PA0 para evitar reseteos por ruido electromagnético
+    HAL_PWR_DisableWakeUpPin(PWR_WAKEUP_PIN1);
+
+    // 6. Entramos en STANDBY absoluto.
+    HAL_PWR_EnterSTANDBYMode();
+
+    /* --- EL MICRO NUNCA PASARÁ DE ESTA LÍNEA ---
+       Solo revivirá cuando el usuario pulse el botón físico de RESET */
+}
+

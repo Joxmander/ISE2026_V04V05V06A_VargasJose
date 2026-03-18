@@ -28,4 +28,9 @@ void Sistema_EntrarEnSleep(void);
  */
 void Sistema_EntrarEnStop(void);
 
+/**
+ * @brief Configura el sistema para entrar en modo Standby.
+ */
+void Sistema_EntrarEnStandby(void);
+
 #endif

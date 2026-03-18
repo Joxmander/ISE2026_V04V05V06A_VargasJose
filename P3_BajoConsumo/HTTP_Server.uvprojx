@@ -518,6 +518,11 @@
               <FileType>9</FileType>
               <FilePath>.\Web\rtc.cgx</FilePath>
             </File>
+            <File>
+              <FileName>power.cgi</FileName>
+              <FileType>9</FileType>
+              <FilePath>.\Web\power.cgi</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>

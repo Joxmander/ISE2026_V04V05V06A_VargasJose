@@ -18,5 +18,6 @@ logo.gif,
 llblue.jpg,
 pabb.gif,
 time.cgi,
-rtc.cgx 
+rtc.cgx,
+power.cgi 
 TO Web.c RTE NOPRINT ROOT(Web)

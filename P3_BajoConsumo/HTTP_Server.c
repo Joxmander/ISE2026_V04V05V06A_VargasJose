@@ -54,6 +54,12 @@ uint8_t alarma_habilitada_web = 1;          // Bandera para saber si el usuario 
 ADC_HandleTypeDef hadc1;                    // Estructura de control (Handler) para mi conversor Analógico-Digital.
 static NET_ADDR server_addr;                // Estructura estática para guardar la IP y puerto del servidor SNTP sin perderla en memoria.
 
+/* --- RECURSOS MODOS BAJO CONSUMO --- */
+// Variable global para que el usuario elija su política de ahorro
+// 0 = Sleep (Despertar instantáneo), 1 = STOP (Ahorro máximo de pilas)
+uint8_t modo_energia_seleccionado = 1; // Por defecto STOP para el SECRM
+
+
 /* --- MIS RECURSOS DE TIMERS DEL RTOS --- */
 // Guardo el identificador (ID) de mis timers para poder arrancarlos y pararlos a placer.
 osTimerId_t timer_led_rojo;
@@ -174,7 +180,17 @@ void Time_Thread (void *argument) {
         // Si pasan 15 segundos sin actividad, mando el micro a dormir.
         contador_sleep++;
         if (contador_sleep == 15) {
-            Sistema_EntrarEnSleep();
+					// En lugar de llamar a una función fija, elijo según mi variable global.
+                switch(modo_energia_seleccionado) {
+                    case 0:
+                        Sistema_EntrarEnSleep();
+                        break;
+                    case 1:
+                        Sistema_EntrarEnStop();
+                        break;
+                    default:
+                        Sistema_EntrarEnStop();
+                }
             // Al despertar, reseteo el contador para que no vuelva a dormir en 1s.
             contador_sleep = 0; 
         }

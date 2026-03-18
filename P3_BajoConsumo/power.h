@@ -23,4 +23,9 @@ extern volatile uint8_t is_sleeping;
  */
 void Sistema_EntrarEnSleep(void);
 
+/**
+ * @brief Configura el sistema para entrar en modo Stop.
+ */
+void Sistema_EntrarEnStop(void);
+
 #endif

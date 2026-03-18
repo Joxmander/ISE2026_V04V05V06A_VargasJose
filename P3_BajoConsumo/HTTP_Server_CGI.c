@@ -28,6 +28,7 @@ extern uint16_t AD_in (uint32_t ch);
 extern bool LEDrun;
 extern char lcd_text[2][20+1];
 extern uint8_t  get_button (void);
+extern uint8_t modo_energia_seleccionado;
 
 /* --- VARIABLES EXTERNAS DEL APARTADO 5 --- */
 extern uint8_t sntp_server_index;
@@ -263,6 +264,13 @@ void netCGI_ProcessData (uint8_t code, const char *data, uint32_t len) {
               RTC_SetFechaManual((uint8_t)dia, (uint8_t)mes, (uint16_t)anio);
           }
       }
+			
+      // --- GESTIÓN DE ENERGÍA (APARTADO 3 - SECRM) ---
+      // Capturo la elección del usuario desde la web para decidir si el 
+      // Nodo B debe entrar en modo Sleep o en modo STOP tras la inactividad.
+      else if (strncmp(var, "pw_mode=", 8) == 0) {
+          modo_energia_seleccionado = (uint8_t)atoi(&var[8]);
+      }
 
       
     }
@@ -471,6 +479,22 @@ uint32_t netCGI_Script (const char *env, char *buf, uint32_t buflen, uint32_t *p
     case 'y':
       len = (uint32_t)sprintf (buf, "<checkbox><id>button%c</id><on>%s</on></checkbox>",
                                env[1], (get_button () & (1 << (env[1]-'0'))) ? "true" : "false");
+      break;
+		
+    case 'p': // --- CASO 'p': Configuración de Energía ---
+      switch (env[1]) {
+        case '0': // %p0: Muestra el nombre del modo actual en texto
+          len = (uint32_t)sprintf(buf, "%s", (modo_energia_seleccionado == 1) ? "STOP (Maximo Ahorro)" : "Sleep (Respuesta Rapida)");
+          break;
+          
+        case '1': // %p1: Marca el Radio Button de "Sleep" si está seleccionado
+          if (modo_energia_seleccionado == 0) len = (uint32_t)sprintf(buf, "checked");
+          break;
+          
+        case '2': // %p2: Marca el Radio Button de "STOP" si está seleccionado
+          if (modo_energia_seleccionado == 1) len = (uint32_t)sprintf(buf, "checked");
+          break;
+      }
       break;
   }
   

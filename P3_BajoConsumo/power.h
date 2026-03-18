@@ -33,4 +33,15 @@ void Sistema_EntrarEnStop(void);
  */
 void Sistema_EntrarEnStandby(void);
 
+/**
+ * @brief Apaga temporalmente los relojes de los periféricos que usamos en modo RUN,
+ * pero que son inútiles mientras el sistema duerme. (Optimización Dinámica)
+ */
+void Apagar_Perifericos_Temporalmente(void);
+
+/**
+ * @brief Restaura la energía de los periféricos para que el sistema vuelva a funcionar normal.
+ */
+void Restaurar_Perifericos_Temporalmente(void);
+	
 #endif

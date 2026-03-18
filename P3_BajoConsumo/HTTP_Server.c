@@ -57,8 +57,9 @@ static NET_ADDR server_addr;                // Estructura estática para guardar 
 /* --- RECURSOS MODOS BAJO CONSUMO --- */
 // Variable global para que el usuario elija su política de ahorro
 // 0 = Sleep (Despertar instantáneo), 1 = STOP (Ahorro máximo de pilas)
-uint8_t modo_energia_seleccionado = 2; // Por defecto SLeep para el SECRM
+uint8_t modo_energia_seleccionado = 1; // Por defecto Sleep para el SECRM
 extern void ETH_PhyExitFromPowerDownMode(void);
+extern void Optimizar_Hardware_Bajo_Consumo (void);
 
 
 /* --- MIS RECURSOS DE TIMERS DEL RTOS --- */
@@ -192,7 +193,7 @@ void Time_Thread (void *argument) {
                     case 2:
                         Sistema_EntrarEnStandby();										
                     default:
-                        Sistema_EntrarEnStandby();
+                        Sistema_EntrarEnSleep();
                 } 
         }
         
@@ -240,6 +241,9 @@ __NO_RETURN void app_main (void *arg) {
 	
   //Despertamos físicamente al Ethernet por si venimos de un Standby. NO estoy seguro de esta linea
   ETH_PhyExitFromPowerDownMode();
+	
+  // Optimización Estática: Ponemos pines sin uso a analógico desde el arranque. Podemos cambiar los pines que queramso en cualquier momento
+  Optimizar_Hardware_Bajo_Consumo();
     
   // 2. Arranco el Stack de Red.
   netInitialize (); 
